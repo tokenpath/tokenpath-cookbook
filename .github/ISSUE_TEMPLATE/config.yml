@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: "How do I…? — ask in Discussions"
+    url: https://github.com/tokenpath/cookbook/discussions
+    about: Usage and integration questions that aren't bugs get answered here.
+  - name: API documentation
+    url: https://docs.tokenpath.ai
+    about: Reference docs for the TokenPath API.
+  - name: Private or billing question
+    url: https://tokenpath.ai
+    about: Email support@tokenpath.ai for anything you'd rather not post publicly.
