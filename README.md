@@ -22,18 +22,26 @@ changes.
 
 ## Notebooks
 
+Every recipe here is something we've built and run for real — executed against
+the live API, outputs included. The collection grows as we ship.
+
 | Notebook | What it shows |
 | --- | --- |
-| [01 — Grounding gate](notebooks/01-grounding-gate.ipynb) | Block unsupported claims before they ship. Drop-in gate + LangChain & LlamaIndex wiring, and the two-stage attribution → verification pattern. |
-| [02 — Citation highlighting](notebooks/02-citation-highlighting.ipynb) | Perplexity-style citations whose highlights land on the exact words, not the chunk. Inline + standalone HTML, and the bracket-and-link pattern. |
-| [03 — Groundedness eval metric](notebooks/03-groundedness-eval.ipynb) | Groundedness as a deterministic scalar for eval harnesses and reward signals — no LLM judge. |
-| [04 — Heatmap visualization](notebooks/04-heatmap-visualization.ipynb) | The raw answer-token × document-token attention matrix: densify, plot, and roll up. |
+| [Citation highlighting](notebooks/citation-highlighting.ipynb) | Perplexity-style citations whose highlights land on the exact words, not the chunk. Inline + standalone HTML, and the bracket-and-link pattern. |
+| [Heatmap visualization](notebooks/heatmap-visualization.ipynb) | The raw answer-token × document-token attention matrix: densify, plot, and roll up. |
 
-Open any of them in Colab:
-[01](https://colab.research.google.com/github/tokenpath/cookbook/blob/main/notebooks/01-grounding-gate.ipynb) ·
-[02](https://colab.research.google.com/github/tokenpath/cookbook/blob/main/notebooks/02-citation-highlighting.ipynb) ·
-[03](https://colab.research.google.com/github/tokenpath/cookbook/blob/main/notebooks/03-groundedness-eval.ipynb) ·
-[04](https://colab.research.google.com/github/tokenpath/cookbook/blob/main/notebooks/04-heatmap-visualization.ipynb)
+Open in Colab:
+[citation highlighting](https://colab.research.google.com/github/tokenpath/cookbook/blob/main/notebooks/citation-highlighting.ipynb) ·
+[heatmap visualization](https://colab.research.google.com/github/tokenpath/cookbook/blob/main/notebooks/heatmap-visualization.ipynb)
+
+### On the roadmap
+
+Tracked as issues — comment or 👍 to prioritize:
+
+- [PDF attribution](https://github.com/tokenpath/cookbook/issues/1) — cite back into the PDF itself, page + highlight
+- [Transcript Q&A attribution](https://github.com/tokenpath/cookbook/issues/2) — click an answer, jump to the moment in the transcript
+- [Structured output attribution](https://github.com/tokenpath/cookbook/issues/3) — trace every extracted field back to its source text
+- [Cited search agent](https://github.com/tokenpath/cookbook/issues/4) — the tokenpath.ai search demo, end to end
 
 ## Running locally
 
