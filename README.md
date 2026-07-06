@@ -28,10 +28,14 @@ the live API, outputs included. The collection grows as we ship.
 | Notebook | What it shows |
 | --- | --- |
 | [Citation highlighting](notebooks/citation-highlighting.ipynb) | Perplexity-style citations whose highlights land on the exact words, not the chunk. Inline + standalone HTML, and the bracket-and-link pattern. |
+| [Structured output attribution](notebooks/structured-output-attribution.ipynb) | Trace every extracted JSON field back to its exact source span — including disambiguating repeated values that naive string search maps to the wrong occurrence. |
+| [Transcript Q&A attribution](notebooks/transcript-qna-attribution.ipynb) | Meeting notes and transcript answers where every claim links back to the speaker, timestamp, and exact words behind it. |
 | [Heatmap visualization](notebooks/heatmap-visualization.ipynb) | The raw answer-token × document-token attention matrix: densify, plot, and roll up. |
 
 Open in Colab:
 [citation highlighting](https://colab.research.google.com/github/tokenpath/tokenpath-cookbook/blob/main/notebooks/citation-highlighting.ipynb) ·
+[structured output](https://colab.research.google.com/github/tokenpath/tokenpath-cookbook/blob/main/notebooks/structured-output-attribution.ipynb) ·
+[transcript Q&A](https://colab.research.google.com/github/tokenpath/tokenpath-cookbook/blob/main/notebooks/transcript-qna-attribution.ipynb) ·
 [heatmap visualization](https://colab.research.google.com/github/tokenpath/tokenpath-cookbook/blob/main/notebooks/heatmap-visualization.ipynb)
 
 ### On the roadmap
@@ -39,8 +43,6 @@ Open in Colab:
 Tracked as issues — comment or 👍 to prioritize:
 
 - [PDF attribution](https://github.com/tokenpath/tokenpath-cookbook/issues/1) — cite back into the PDF itself, page + highlight
-- [Transcript Q&A attribution](https://github.com/tokenpath/tokenpath-cookbook/issues/2) — click an answer, jump to the moment in the transcript
-- [Structured output attribution](https://github.com/tokenpath/tokenpath-cookbook/issues/3) — trace every extracted field back to its source text
 - [Cited search agent](https://github.com/tokenpath/tokenpath-cookbook/issues/4) — the tokenpath.ai search demo, end to end
 
 ## Running locally
