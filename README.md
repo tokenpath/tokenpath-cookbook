@@ -31,23 +31,23 @@ the live API, outputs included. The collection grows as we ship.
 | [Heatmap visualization](notebooks/heatmap-visualization.ipynb) | The raw answer-token × document-token attention matrix: densify, plot, and roll up. |
 
 Open in Colab:
-[citation highlighting](https://colab.research.google.com/github/tokenpath/cookbook/blob/main/notebooks/citation-highlighting.ipynb) ·
-[heatmap visualization](https://colab.research.google.com/github/tokenpath/cookbook/blob/main/notebooks/heatmap-visualization.ipynb)
+[citation highlighting](https://colab.research.google.com/github/tokenpath/tokenpath-cookbook/blob/main/notebooks/citation-highlighting.ipynb) ·
+[heatmap visualization](https://colab.research.google.com/github/tokenpath/tokenpath-cookbook/blob/main/notebooks/heatmap-visualization.ipynb)
 
 ### On the roadmap
 
 Tracked as issues — comment or 👍 to prioritize:
 
-- [PDF attribution](https://github.com/tokenpath/cookbook/issues/1) — cite back into the PDF itself, page + highlight
-- [Transcript Q&A attribution](https://github.com/tokenpath/cookbook/issues/2) — click an answer, jump to the moment in the transcript
-- [Structured output attribution](https://github.com/tokenpath/cookbook/issues/3) — trace every extracted field back to its source text
-- [Cited search agent](https://github.com/tokenpath/cookbook/issues/4) — the tokenpath.ai search demo, end to end
+- [PDF attribution](https://github.com/tokenpath/tokenpath-cookbook/issues/1) — cite back into the PDF itself, page + highlight
+- [Transcript Q&A attribution](https://github.com/tokenpath/tokenpath-cookbook/issues/2) — click an answer, jump to the moment in the transcript
+- [Structured output attribution](https://github.com/tokenpath/tokenpath-cookbook/issues/3) — trace every extracted field back to its source text
+- [Cited search agent](https://github.com/tokenpath/tokenpath-cookbook/issues/4) — the tokenpath.ai search demo, end to end
 
 ## Running locally
 
 ```bash
-git clone https://github.com/tokenpath/cookbook.git
-cd cookbook
+git clone https://github.com/tokenpath/tokenpath-cookbook.git
+cd tokenpath-cookbook
 pip install -r requirements.txt
 export TOKENPATH_API_KEY=...   # free key: https://platform.tokenpath.ai
 jupyter lab notebooks/
@@ -60,10 +60,10 @@ you go.
 
 ## Getting help
 
-- 🐛 **Bugs & broken examples** → [open an Issue](https://github.com/tokenpath/cookbook/issues/new/choose).
+- 🐛 **Bugs & broken examples** → [open an Issue](https://github.com/tokenpath/tokenpath-cookbook/issues/new/choose).
   Fastest way to get something fixed — include the notebook name and the
   `request_id` from any API error.
-- 💬 **"How do I…?" questions** → [start a Discussion](https://github.com/tokenpath/cookbook/discussions).
+- 💬 **"How do I…?" questions** → [start a Discussion](https://github.com/tokenpath/tokenpath-cookbook/discussions).
   Integration questions, use-case design, "is TokenPath right for X" — anything
   that isn't a bug.
 - 📚 **API reference** → [docs.tokenpath.ai](https://docs.tokenpath.ai)
