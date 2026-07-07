@@ -1,0 +1,21 @@
+# Secrets never live in the repo — env vars only.
+*.env
+.env
+
+__pycache__/
+*.pyc
+
+# Large / redistributed data: downloaded or assembled locally, not committed.
+data/LongBench-Cite.json
+data/webcode/
+data/split_seed*.json
+
+# Intermediate, regenerable run artifacts (frozen answers, per-method citations,
+# judge transcripts). Large; reproduced by re-running. The committed record is
+# the summary JSONs + tables + figures below.
+results/exp1_frozen_answers.jsonl
+results/exp1_cited_*.jsonl
+results/exp1_judged_*.jsonl
+results/exp2_row_scores.jsonl
+
+# Keep: results/*.md, results/*.png, results/exp*_scores*.json, exp1_threshold.json
