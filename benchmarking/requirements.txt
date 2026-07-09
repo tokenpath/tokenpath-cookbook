@@ -1,0 +1,12 @@
+# Core harness
+requests>=2.31
+numpy>=1.26
+pandas>=2.0
+matplotlib>=3.8
+tqdm>=4.66
+
+# Optional — the embedding retrieve+rerank baseline (Exp 1) and the GLM-4
+# citation-length count. The harness runs without these; the embedding method is
+# skipped and citation length falls back to a word count if they are absent.
+# sentence-transformers>=3.0
+# transformers>=4.44

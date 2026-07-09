@@ -1,0 +1,7 @@
+step,f1_reported
+baseline (mass_to_sentences),0.7222
+"+row_norm, thr .20",0.7585
++ thr .25,0.7721
++ thr .30,0.7835
++ thr .35,0.7831
++ thr .30 + merge (final),0.785
