@@ -27,8 +27,8 @@ from .. import config
 from ..common import env
 from ..common.cite_len import backend as cite_len_backend
 from ..common.cite_len import mean_citation_len
-from ..common.io_utils import (append_jsonl, load_done_ids, read_json, read_jsonl,
-                               write_json)
+from ..common.io_utils import (append_jsonl, load_done_ids, parallel_append,
+                               read_json, read_jsonl, write_json)
 from ..common.judge import CitationJudge
 from ..common.timing import MethodCost
 from . import freeze_answers, load_data
@@ -45,7 +45,7 @@ def build_method(name: str, cfg: config.RunConfig):
     if name == "tokenpath":
         from .methods.tokenpath_method import TokenPathMethod
 
-        return TokenPathMethod(env.tokenpath_client(), cfg.tokenpath_mass_threshold)
+        return TokenPathMethod(env.tokenpath_client())  # uses config.TOKENPATH_AGG
     if name == "prompted":
         from .methods.prompted_method import PromptedMethod
 
@@ -53,7 +53,7 @@ def build_method(name: str, cfg: config.RunConfig):
     if name == "embedding":
         from .methods.embedding_method import EmbeddingMethod
 
-        return EmbeddingMethod(cfg.embed_model, cfg.rerank_model)
+        return EmbeddingMethod(cfg.embed_model)
     if name == "citations_api":
         from .methods.citations_api_method import CitationsAPIMethod
 
@@ -72,16 +72,20 @@ def cite_stage(name: str, method, examples: list[dict], frozen: dict[str, str]) 
     done = load_done_ids(out)
     todo = [e for e in examples if e["idx"] not in done and e["idx"] in frozen]
     print(f"[{name}] cite: {len(done)} cached, {len(todo)} to do")
-    for e in tqdm(todo, desc=f"cite:{name}"):
+
+    def worker(e: dict) -> dict:
         try:
-            ca: CitedAnswer = method.cite(e, frozen[e["idx"]])
-            append_jsonl(out, ca.to_record())
+            return method.cite(e, frozen[e["idx"]]).to_record()
         except Exception as exc:  # keep going; a failed example is logged, not fatal
-            append_jsonl(out, {"idx": e["idx"], "dataset": e["dataset"],
-                               "query": e["query"], "prediction": frozen[e["idx"]],
-                               "statements": [], "method": name,
-                               "latency_s": 0.0, "cost_usd": 0.0,
-                               "extra": {"error": str(exc)[:300]}})
+            return {"idx": e["idx"], "dataset": e["dataset"], "query": e["query"],
+                    "prediction": frozen[e["idx"]], "statements": [], "method": name,
+                    "latency_s": 0.0, "cost_usd": 0.0, "extra": {"error": str(exc)[:300]}}
+
+    # Embedding runs local torch inference (GIL-bound, not thread-safe) -> serial.
+    # TokenPath's API is rate-limited (429s under high concurrency) -> modest pool
+    # + client-side backoff. The OpenAI/Anthropic-backed methods tolerate more.
+    workers = {"embedding": 1, "tokenpath": 4}.get(name, 8)
+    parallel_append(out, todo, worker, workers=workers, desc=f"cite:{name}")
     return out
 
 
@@ -93,12 +97,17 @@ def judge_stage(name: str, cited_path: str, cfg: config.RunConfig) -> str:
     done = load_done_ids(out)
     cited = [r for r in read_jsonl(cited_path) if r["idx"] not in done]
     print(f"[{name}] judge: {len(done)} cached, {len(cited)} to do")
-    judge = CitationJudge(env.openrouter_client(), cfg.judge_model)
-    for rec in tqdm(cited, desc=f"judge:{name}"):
+    client = env.openrouter_client()  # shared client; each worker gets its own judge
+
+    def worker(rec: dict) -> dict:
+        # A fresh CitationJudge per record so its cost/token counters aren't shared
+        # across threads; the underlying HTTP client (connection pool) is shared.
+        judge = CitationJudge(client, cfg.judge_model)
         scored = judge.get_citation_score(dict(rec), max_statement_num=40)
         scored["judge_cost_usd"] = judge.cost_usd
-        append_jsonl(out, scored)
-        judge.cost_usd = 0.0  # per-record accounting; total re-summed below
+        return scored
+
+    parallel_append(out, cited, worker, workers=12, desc=f"judge:{name}")
     return out
 
 

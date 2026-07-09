@@ -1,0 +1,5 @@
+method,kind,recall,precision,f1_reported,f1_example_mean,cite_len_glm4,cites_per_stmt,latency_p50_s,usd_per_query
+Prompted (gpt-5.5),post-hoc LLM add-citations,0.8402,0.8846,0.8506,0.8719,35.4,1.04,8.3,0.09
+Citations API (Sonnet-5),generation-time (regenerates),0.7609,0.9151,0.8124,0.8247,177.1,0.67,9.9,0.093
+TokenPath,post-hoc attention,0.7118,0.8978,0.785,0.8101,106.2,0.79,1.68,0.0125
+Embedding retrieve+rerank,post-hoc retrieval+rerank,0.6449,0.6303,0.6224,0.707,33.9,2.01,1.0,0.0014

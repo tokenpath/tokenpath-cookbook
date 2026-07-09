@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import os
 
-from .openrouter import OpenRouterClient
+from .openrouter import LLMClient
 from .tokenpath import TokenPathClient
 
 
@@ -20,8 +20,13 @@ def tokenpath_client() -> TokenPathClient:
     return TokenPathClient(os.environ.get("TOKENPATH_API_KEY", ""))
 
 
-def openrouter_client() -> OpenRouterClient:
-    return OpenRouterClient(os.environ.get("OPENROUTER_API_KEY", ""))
+def llm_client() -> LLMClient:
+    """Multi-backend chat client; reads OPENAI/GOOGLE/OPENROUTER keys from env."""
+    return LLMClient()
+
+
+# Back-compat alias — call sites still say openrouter_client().
+openrouter_client = llm_client
 
 
 def anthropic_key() -> str | None:

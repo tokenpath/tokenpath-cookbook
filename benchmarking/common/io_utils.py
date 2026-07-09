@@ -11,7 +11,9 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-from typing import Any, Iterable
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Any, Callable, Iterable
 
 
 def ensure_dir(path: str) -> str:
@@ -35,6 +37,40 @@ def append_jsonl(path: str, record: dict) -> None:
 
 def load_done_ids(path: str, key: str = "idx") -> set:
     return {r[key] for r in read_jsonl(path) if key in r}
+
+
+def parallel_append(
+    path: str,
+    items: list,
+    worker: Callable[[Any], dict | None],
+    workers: int = 8,
+    desc: str | None = None,
+) -> None:
+    """Run `worker(item) -> record` over items concurrently, appending each
+    record to `path` as it finishes. Every LLM/API call the harness makes per
+    item is independent, so the wall-clock is bounded by the slowest item, not
+    the sum. Writes are serialized by a lock; the file stays valid JSONL and
+    idx-dedup on resume still works. `workers=1` runs sequentially (use for
+    local, non-thread-safe work like torch inference)."""
+    from tqdm import tqdm
+
+    lock = threading.Lock()
+
+    def run(item):
+        rec = worker(item)
+        if rec is not None:
+            with lock:
+                append_jsonl(path, rec)
+        return rec
+
+    if workers <= 1:
+        for it in tqdm(items, desc=desc):
+            run(it)
+        return
+    with ThreadPoolExecutor(max_workers=workers) as ex:
+        futures = [ex.submit(run, it) for it in items]
+        for _ in tqdm(as_completed(futures), total=len(futures), desc=desc):
+            pass
 
 
 def write_json(path: str, obj: Any) -> None:

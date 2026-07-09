@@ -17,6 +17,8 @@ price them at config.TOKENPATH_USD_PER_MTOK.
 from __future__ import annotations
 
 from ... import config
+from ...common import aggregate as agg
+from ...common.segment import statement_spans
 from ...common.timing import tokenpath_cost_usd
 from ...common.tokenpath import Heatmap, TokenPathClient
 from .base import CitedAnswer, Method, empty_statements
@@ -28,11 +30,13 @@ class TokenPathMethod(Method):
     def __init__(
         self,
         client: TokenPathClient,
-        mass_threshold: float = config.TOKENPATH_MASS_THRESHOLD,
+        agg_cfg: dict | None = None,
         usd_per_mtok: float = config.TOKENPATH_USD_PER_MTOK,
     ):
         self.client = client
-        self.mass_threshold = mass_threshold
+        # Tuned aggregation (row-norm + threshold 0.30 + passage-merge) — see
+        # config.TOKENPATH_AGG and common/aggregate.py.
+        self.agg_cfg = agg_cfg if agg_cfg is not None else config.TOKENPATH_AGG
         self.usd_per_mtok = usd_per_mtok
 
     def cite(self, example: dict, answer: str) -> CitedAnswer:
@@ -40,10 +44,15 @@ class TokenPathMethod(Method):
         timed = self.client.heatmap(document, query, answer)
         hm = Heatmap.from_response(timed.value)
 
+        # Cite at the sentence level — LongBench-Cite's native unit. Segment the
+        # document once; the aggregator turns attention mass into cited sentences.
+        doc_sentence_spans = statement_spans(document)
+
         statements = empty_statements(answer)
         for st in statements:
             s, e = st["span"]
-            spans = hm.mass_to_spans(s, e, self.mass_threshold)
+            spans = agg.aggregate(hm, s, e, doc_sentence_spans, self.agg_cfg,
+                                  answer_text=answer)
             st["citation"] = [
                 {"cite": document[cs:ce], "mass": round(mass, 4),
                  "source_start": cs, "source_end": ce}

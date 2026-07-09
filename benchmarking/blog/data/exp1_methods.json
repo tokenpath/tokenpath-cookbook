@@ -1,0 +1,122 @@
+{
+  "prompted_gpt5.5": {
+    "f1_reported": 0.8506,
+    "recall_reported": 0.8402,
+    "precision_reported": 0.8846,
+    "f1_example_mean": 0.8719,
+    "recall_example_mean": 0.8602,
+    "precision_example_mean": 0.901,
+    "cite_len_glm4": 35.4,
+    "cites_per_stmt": 1.04,
+    "n": 480,
+    "per_dataset_f1": {
+      "gov_report": 0.9724,
+      "hotpotqa": 0.8105,
+      "longbench-chat": 0.7689,
+      "multifieldqa_en": 0.8539
+    },
+    "latency_p50_s": 8.3,
+    "usd_per_query": 0.09,
+    "kind": "post-hoc LLM add-citations"
+  },
+  "citations_api_sonnet5": {
+    "f1_reported": 0.8124,
+    "recall_reported": 0.7609,
+    "precision_reported": 0.9151,
+    "f1_example_mean": 0.8247,
+    "recall_example_mean": 0.7638,
+    "precision_example_mean": 0.9269,
+    "cite_len_glm4": 177.1,
+    "cites_per_stmt": 0.67,
+    "n": 480,
+    "per_dataset_f1": {
+      "gov_report": 0.947,
+      "hotpotqa": 0.7318,
+      "longbench-chat": 0.7584,
+      "multifieldqa_en": 0.8073
+    },
+    "latency_p50_s": 9.9,
+    "usd_per_query": 0.093,
+    "kind": "generation-time (regenerates)"
+  },
+  "tokenpath_tuned": {
+    "f1_reported": 0.785,
+    "recall_reported": 0.7118,
+    "precision_reported": 0.8978,
+    "f1_example_mean": 0.8101,
+    "recall_example_mean": 0.7489,
+    "precision_example_mean": 0.9051,
+    "cite_len_glm4": 106.2,
+    "cites_per_stmt": 0.79,
+    "n": 480,
+    "per_dataset_f1": {
+      "gov_report": 0.8541,
+      "hotpotqa": 0.802,
+      "longbench-chat": 0.6988,
+      "multifieldqa_en": 0.7993
+    },
+    "latency_p50_s": 1.68,
+    "usd_per_query": 0.0125,
+    "kind": "post-hoc attention"
+  },
+  "tokenpath_baseline": {
+    "f1_reported": 0.7232,
+    "recall_reported": 0.6875,
+    "precision_reported": 0.7852,
+    "f1_example_mean": 0.7535,
+    "recall_example_mean": 0.7212,
+    "precision_example_mean": 0.8078,
+    "cite_len_glm4": 73.1,
+    "cites_per_stmt": 1.4,
+    "n": 480,
+    "per_dataset_f1": {
+      "gov_report": 0.812,
+      "hotpotqa": 0.7315,
+      "longbench-chat": 0.626,
+      "multifieldqa_en": 0.7474
+    },
+    "latency_p50_s": 1.68,
+    "usd_per_query": 0.0125,
+    "kind": "post-hoc attention (pre-tuning)"
+  },
+  "embedding_retrieve_rerank": {
+    "f1_reported": 0.6224,
+    "recall_reported": 0.6449,
+    "precision_reported": 0.6303,
+    "f1_example_mean": 0.707,
+    "recall_example_mean": 0.7312,
+    "precision_example_mean": 0.7118,
+    "cite_len_glm4": 33.9,
+    "cites_per_stmt": 2.01,
+    "n": 480,
+    "per_dataset_f1": {
+      "gov_report": 0.843,
+      "hotpotqa": 0.6574,
+      "longbench-chat": 0.3669,
+      "multifieldqa_en": 0.7053
+    },
+    "latency_p50_s": 1.0,
+    "usd_per_query": 0.0014,
+    "kind": "post-hoc retrieval+rerank"
+  },
+  "embedding_retrieve_only": {
+    "f1_reported": 0.5181,
+    "recall_reported": 0.6505,
+    "precision_reported": 0.4543,
+    "f1_example_mean": 0.5809,
+    "recall_example_mean": 0.7382,
+    "precision_example_mean": 0.505,
+    "cite_len_glm4": 35.6,
+    "cites_per_stmt": 4.04,
+    "n": 480,
+    "per_dataset_f1": {
+      "gov_report": 0.7506,
+      "hotpotqa": 0.5234,
+      "longbench-chat": 0.2804,
+      "multifieldqa_en": 0.5316
+    },
+    "latency_p50_s": 1.0,
+    "usd_per_query": 0.0014,
+    "kind": "post-hoc retrieval (no rerank)"
+  }
+}

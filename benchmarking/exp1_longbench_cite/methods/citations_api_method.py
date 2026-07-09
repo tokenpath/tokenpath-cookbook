@@ -138,6 +138,10 @@ class CitationsAPIMethod(Method):
 
         preserved = difflib.SequenceMatcher(None, answer, regenerated).ratio()
         usage = data.get("usage", {})
+        in_tok = usage.get("input_tokens") or 0
+        out_tok = usage.get("output_tokens") or 0
+        in_price, out_price = config.ANTHROPIC_PRICE.get(self.model, (0.0, 0.0))
+        cost_usd = in_tok / 1_000_000 * in_price + out_tok / 1_000_000 * out_price
         return CitedAnswer(
             idx=example["idx"],
             dataset=example["dataset"],
@@ -146,7 +150,7 @@ class CitationsAPIMethod(Method):
             statements=statements,
             method=self.name,
             latency_s=seconds,
-            cost_usd=0.0,  # Anthropic usage is in tokens; priced separately in the table note
+            cost_usd=cost_usd,  # priced from Anthropic token usage (config.ANTHROPIC_PRICE)
             extra={
                 "answer_preserved": round(preserved, 4),
                 "regenerated": True,

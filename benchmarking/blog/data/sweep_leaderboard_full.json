@@ -1,0 +1,58 @@
+{
+  "baseline": {
+    "n": 480,
+    "f1": 0.7528,
+    "recall": 0.7203,
+    "precision": 0.807,
+    "f1_reported": 0.7222,
+    "cost": 2.719
+  },
+  "thr20_rn": {
+    "n": 480,
+    "f1": 0.7818,
+    "recall": 0.7364,
+    "precision": 0.8505,
+    "f1_reported": 0.7585,
+    "cost": 2.655
+  },
+  "thr25_rn": {
+    "n": 480,
+    "f1": 0.7981,
+    "recall": 0.7445,
+    "precision": 0.879,
+    "f1_reported": 0.7721,
+    "cost": 2.609
+  },
+  "thr30_rn": {
+    "n": 480,
+    "f1": 0.8078,
+    "recall": 0.7501,
+    "precision": 0.8983,
+    "f1_reported": 0.7835,
+    "cost": 2.604
+  },
+  "thr35_rn": {
+    "n": 480,
+    "f1": 0.8021,
+    "recall": 0.7354,
+    "precision": 0.9093,
+    "f1_reported": 0.7831,
+    "cost": 2.603
+  },
+  "thr30_rn_merge": {
+    "n": 480,
+    "f1": 0.8101,
+    "recall": 0.7489,
+    "precision": 0.9051,
+    "f1_reported": 0.785,
+    "cost": 2.537
+  },
+  "thr30_rn_content_merge": {
+    "n": 480,
+    "f1": 0.7952,
+    "recall": 0.7304,
+    "precision": 0.896,
+    "f1_reported": 0.7747,
+    "cost": 2.513
+  }
+}

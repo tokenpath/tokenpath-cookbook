@@ -1,0 +1,32 @@
+[
+  {
+    "step": "baseline (mass_to_sentences)",
+    "config": "baseline",
+    "f1_reported": 0.7222
+  },
+  {
+    "step": "+row_norm, thr .20",
+    "config": "thr20_rn",
+    "f1_reported": 0.7585
+  },
+  {
+    "step": "+ thr .25",
+    "config": "thr25_rn",
+    "f1_reported": 0.7721
+  },
+  {
+    "step": "+ thr .30",
+    "config": "thr30_rn",
+    "f1_reported": 0.7835
+  },
+  {
+    "step": "+ thr .35",
+    "config": "thr35_rn",
+    "f1_reported": 0.7831
+  },
+  {
+    "step": "+ thr .30 + merge (final)",
+    "config": "thr30_rn_merge",
+    "f1_reported": 0.785
+  }
+]
