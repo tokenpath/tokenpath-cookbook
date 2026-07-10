@@ -27,12 +27,14 @@ the live API, outputs included. The collection grows as we ship.
 
 | Notebook | What it shows |
 | --- | --- |
+| [How TokenPath works](notebooks/how-tokenpath-works.ipynb) | The internals, hands-on: turn the attention heatmap into a citation, three things string matching can't do (cross-lingual, paraphrase, tables), and an optional section that reproduces the same attention read from raw Transformers on Llama-3.1-8B. |
 | [Citation highlighting](notebooks/citation-highlighting.ipynb) | Perplexity-style citations whose highlights land on the exact words, not the chunk. Inline + standalone HTML, and the bracket-and-link pattern. |
 | [Structured output attribution](notebooks/structured-output-attribution.ipynb) | Trace every extracted JSON field back to its exact source span — including disambiguating repeated values that naive string search maps to the wrong occurrence. |
 | [Transcript Q&A attribution](notebooks/transcript-qna-attribution.ipynb) | Meeting notes and transcript answers where every claim links back to the speaker, timestamp, and exact words behind it. |
 | [Heatmap visualization](notebooks/heatmap-visualization.ipynb) | The raw answer-token × document-token attention matrix: densify, plot, and roll up. |
 
 Open in Colab:
+[how TokenPath works](https://colab.research.google.com/github/tokenpath/tokenpath-cookbook/blob/main/notebooks/how-tokenpath-works.ipynb) ·
 [citation highlighting](https://colab.research.google.com/github/tokenpath/tokenpath-cookbook/blob/main/notebooks/citation-highlighting.ipynb) ·
 [structured output](https://colab.research.google.com/github/tokenpath/tokenpath-cookbook/blob/main/notebooks/structured-output-attribution.ipynb) ·
 [transcript Q&A](https://colab.research.google.com/github/tokenpath/tokenpath-cookbook/blob/main/notebooks/transcript-qna-attribution.ipynb) ·
