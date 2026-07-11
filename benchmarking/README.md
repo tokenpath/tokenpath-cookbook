@@ -17,8 +17,7 @@ get citations today**, on benchmarks we didn't write:
 | # | Experiment | Benchmark | What it shows |
 |---|---|---|---|
 | 1 | Citation quality | [LongBench-Cite](https://github.com/THUDM/LongCite) | F1 vs. prompted / regenerated / retrieved citation, plus latency & $/query in the same table |
-| 2 | Citation precision filter | [WebCode](https://exa.ai/blog/webcode) (Exa) | TokenPath raises every search provider's citation precision under one shared filter |
-| 3 | Memorization detection | rides on Exp 2 data | attribution mass separates grounded-correct from memorized-correct answers |
+| 2 | Attribution-guided citation selection | [WebCode](https://exa.ai/blog/webcode) (Exa) | Citation precision for all returned results vs. one shared attribution-mass selection rule |
 
 ## What we compare against (Experiment 1)
 
@@ -55,9 +54,9 @@ our own judge (`rejudge_anchors.py`) so at least one row is a true like-for-like
 
 1. LongBench-Cite's underlying texts are 2023-era. We note it; a stretch goal is
    re-running the protocol on 2025–26 docs to show the numbers hold.
-2. In the WebCode comparison, attribution *sees the answer*; retrieval doesn't.
-   Different stages — we verify, they retrieve. That's the point of Exp 2, not a
-   flaw in it.
+2. In the WebCode comparison, attribution runs after answer generation while
+   retrieval happens upstream. Exp 2 measures citation selection among results
+   already returned; it does not compare retrieval quality.
 
 ## Setup
 
@@ -97,8 +96,6 @@ python -m benchmarking.exp2_webcode.load_data --make-sample   # offline fixture
 python -m benchmarking.exp2_webcode.run --data benchmarking/data/webcode/sample.jsonl
 python -m benchmarking.exp2_webcode.make_chart
 
-# Exp 3
-python -m benchmarking.exp3_memorization.run
 ```
 
 ## Data you supply
@@ -134,8 +131,7 @@ benchmarking/
   common/                       tokenpath client, openrouter client, judge (LongCite port),
                                 segmentation, timing/cost, citation-length, io/caching
   exp1_longbench_cite/          loader, frozen-answer gen, 4 methods, tune, re-judge, run, table
-  exp2_webcode/                 loader, generate→attribute→filter→score, run, chart
-  exp3_memorization/            grounded-vs-memorized mass separability
+  exp2_webcode/                 loader, generate→attribute→select→score, run, chart
   scripts/run_all.sh            one command per table
   results/                      tables (.md), figures (.png), summary scores (.json)
 ```

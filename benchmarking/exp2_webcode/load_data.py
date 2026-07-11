@@ -1,11 +1,10 @@
-"""Load WebCode: anti-memorization QA pairs + each provider's search results.
+"""Load WebCode QA pairs and each provider's search results.
 
 WebCode (Exa, 2026) is 317 {query, expected_answer} pairs drawn from
-authoritative docs (GNU, W3C, IETF RFCs, Python/Rust/Go official docs), filtered
-so two frontier models fail to answer from parametric memory over three
-completions — i.e. the answer must be *retrieved*, not recalled. The queries were
-dispatched to five providers (Exa, Brave, Perplexity, Parallel, Tavily) and
-graded on groundedness / citation precision.
+authoritative docs (GNU, W3C, IETF RFCs, Python/Rust/Go official docs), selected
+so answering requires information from the retrieved documents. The queries were
+dispatched to five providers (Exa, Brave, Perplexity, Parallel, Tavily), with
+result support labels used to calculate citation precision.
 
 We do not redistribute WebCode or provider outputs. Point this loader at a JSONL
 you assemble from Exa's release + your own provider API calls, one line per

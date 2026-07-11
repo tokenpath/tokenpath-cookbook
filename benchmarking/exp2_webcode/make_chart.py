@@ -1,9 +1,8 @@
-"""Render the Experiment 2 figure + table: citation precision before vs after the
-TokenPath mass filter, per provider.
+"""Render Experiment 2: attribution-guided citation selection, per provider.
 
-One grouped bar chart (before vs after) and a Markdown table. The chart is the
-positioning move: TokenPath sits next to all five providers as a precision layer,
-competitor to none. Both outputs land in results/.
+The grouped bar chart and Markdown table compare citation precision across all
+returned results with precision in the attribution-guided selected set. Both
+outputs land in results/.
 """
 
 from __future__ import annotations
@@ -18,17 +17,18 @@ RESULTS_DIR = os.path.join(os.path.dirname(__file__), "..", "results")
 
 def render_table(agg: dict) -> str:
     header = (
-        "| Provider | Citation precision (before) | Citation precision "
-        "(after TokenPath filter) | Δ | Mean results kept / returned |\n"
+        "| Provider | Citation precision (all results) | Citation precision "
+        "(attribution-guided selection) | Δ | Mean results selected / returned |\n"
         "|---|---|---|---|---|"
     )
     lines = [header]
     for provider, v in sorted(agg.items()):
-        before, after = v["citation_precision_before"], v["citation_precision_after"]
+        before = v["citation_precision_before_selection"]
+        after = v["citation_precision_after_selection"]
         delta = after - before
         lines.append(
             f"| {provider} | {before:.3f} | {after:.3f} | {delta:+.3f} | "
-            f"{v['mean_results_kept']}/{v['mean_results_returned']} |"
+            f"{v['mean_results_selected']}/{v['mean_results_returned']} |"
         )
     return "\n".join(lines)
 
@@ -45,19 +45,28 @@ def render_chart(agg: dict, out_png: str) -> str | None:
         return None
 
     providers = sorted(agg)
-    before = [agg[p]["citation_precision_before"] for p in providers]
-    after = [agg[p]["citation_precision_after"] for p in providers]
+    before = [agg[p]["citation_precision_before_selection"] for p in providers]
+    after = [agg[p]["citation_precision_after_selection"] for p in providers]
 
     x = np.arange(len(providers))
     w = 0.38
     fig, ax = plt.subplots(figsize=(9, 4.5))
-    ax.bar(x - w / 2, before, w, label="before", color="#b9a9e0")
-    ax.bar(x + w / 2, after, w, label="after TokenPath filter", color="#6b5a9e")
+    ax.bar(x - w / 2, before, w, label="all returned results", color="#b9a9e0")
+    ax.bar(
+        x + w / 2,
+        after,
+        w,
+        label="attribution-guided selection",
+        color="#6b5a9e",
+    )
     ax.set_xticks(x)
     ax.set_xticklabels([p.capitalize() for p in providers])
     ax.set_ylabel("Citation precision")
     ax.set_ylim(0, 1)
-    ax.set_title("WebCode citation precision — before vs after TokenPath filter", loc="left")
+    ax.set_title(
+        "WebCode citation precision — all results vs attribution-guided selection",
+        loc="left",
+    )
     ax.legend(frameon=False)
     for spine in ["top", "right"]:
         ax.spines[spine].set_visible(False)
@@ -79,8 +88,8 @@ def main():
     table = render_table(agg)
     md_path = os.path.join(RESULTS_DIR, "exp2_table.md")
     with open(md_path, "w", encoding="utf-8") as f:
-        f.write("## Experiment 2 — WebCode citation-precision filter\n\n")
-        f.write(f"_Single mass threshold {summary['mass_threshold']} across all "
+        f.write("## Experiment 2 — WebCode attribution-guided citation selection\n\n")
+        f.write(f"_Single selection threshold {summary['selection_threshold']} across all "
                 f"providers; no per-provider tuning._\n\n")
         f.write(table + "\n")
     print(table)
