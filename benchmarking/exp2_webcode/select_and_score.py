@@ -1,19 +1,18 @@
-"""Exp 2 core: TokenPath as a citation-precision filter over search results.
+"""Exp 2 core: attribution-guided citation selection over search results.
 
 For one (query, provider, results) row:
   1. generate an answer from ALL the provider's results (one cheap generator),
   2. grade each result for groundedness against the known expected answer
      (does this result actually contain the information to answer correctly?),
   3. attribute the generated answer against the concatenated results and compute
-     each result's attribution mass — how much the answer actually leaned on it,
-  4. keep only results whose mass clears a single global threshold (identical
-     across every provider — no per-provider tuning), and
-  5. report citation precision BEFORE (all returned results) vs AFTER (only the
-     results the answer actually used).
+     each result's attribution mass — how strongly the answer is associated with it,
+  4. select results whose mass clears a single global threshold (identical across
+     every provider — no per-provider tuning), and
+  5. report citation precision for all returned results and for the selected set.
 
-The finding we're testing: TokenPath doesn't retrieve — it drops the returned-
-but-unused results that drag a provider's citation precision down, so precision
-rises for every provider under the same filter.
+The experiment measures whether one shared attribution-mass selection rule yields
+a more precise set of citations across search providers. It evaluates citation
+selection over results that have already been returned, not retrieval itself.
 """
 
 from __future__ import annotations
@@ -47,21 +46,6 @@ Answer in the format "Grounded: [[Yes/No]]".
 {result}
 </result>"""
 
-CORRECT_PROMPT = """You are grading an answer for correctness. Given a question, the known correct answer, and a candidate answer, decide whether the candidate answer is correct (conveys the same key fact as the correct answer).
-Respond with [[Yes]] if correct or [[No]] if not, in the format "Correct: [[Yes/No]]".
-
-<question>
-{query}
-</question>
-
-<correct_answer>
-{expected}
-</correct_answer>
-
-<candidate_answer>
-{candidate}
-</candidate_answer>"""
-
 
 def concat_results(results: list[dict]) -> tuple[str, list[tuple[int, int]]]:
     """Join result texts into one document; return per-result [start,end) ranges."""
@@ -84,14 +68,9 @@ class ProviderScore:
     n_results: int
     grounded: list[int]  # 1/0 per result
     result_mass: list[float]  # attribution mass per result (fraction of total)
-    kept: list[int]  # result indices kept after the mass filter
+    selected: list[int]  # result indices selected by the shared mass threshold
     latency_s: float
     tokenpath_seconds: float
-    # Exp 3 (memorization) signals — cheap add-ons computed on the same data:
-    answer: str = ""
-    answer_correct: int = 0  # judge: does the generated answer match expected?
-    peak_mass: float = 0.0  # max single-result attribution mass (concentration)
-    grounded_mass: float = 0.0  # attribution mass landing on grounded results
 
 
 class Exp2Scorer:
@@ -101,13 +80,13 @@ class Exp2Scorer:
         llm: OpenRouterClient,
         generator_model: str = config.GENERATOR_MODEL,
         judge_model: str = config.JUDGE_MODEL,
-        mass_threshold: float = config.WEBCODE_MASS_THRESHOLD,
+        selection_threshold: float = config.WEBCODE_SELECTION_THRESHOLD,
     ):
         self.tp = tp
         self.llm = llm
         self.generator_model = generator_model
         self.judge_model = judge_model
-        self.mass_threshold = mass_threshold
+        self.selection_threshold = selection_threshold
         self.judge_cost_usd = 0.0
         self.gen_cost_usd = 0.0
 
@@ -140,20 +119,6 @@ class Exp2Scorer:
         m = re.findall(r"\[\[([a-zA-Z]+)\]\]", res.text)
         return 1 if (m and m[0].lower() == "yes") else 0
 
-    def _correct(self, query: str, expected: str, candidate: str) -> int:
-        import re
-
-        res = self.llm.chat(
-            self.judge_model,
-            [{"role": "user", "content":
-              CORRECT_PROMPT.format(query=query, expected=expected, candidate=candidate)}],
-            temperature=0.0,
-            max_tokens=10,
-        )
-        self.judge_cost_usd += res.cost_usd
-        m = re.findall(r"\[\[([a-zA-Z]+)\]\]", res.text)
-        return 1 if (m and m[0].lower() == "yes") else 0
-
     def _result_mass(self, hm: Heatmap, answer_len: int, ranges: list[tuple[int, int]]) -> list[float]:
         """Fraction of the answer's total attribution mass landing in each result."""
         mass = hm.statement_mass(0, answer_len)  # normalized over document tokens
@@ -178,50 +143,53 @@ class Exp2Scorer:
         timed = self.tp.heatmap(doc, row["query"], answer)
         hm = Heatmap.from_response(timed.value)
         result_mass = self._result_mass(hm, len(answer), ranges)
-        kept = [i for i, m in enumerate(result_mass) if m >= self.mass_threshold]
-
-        answer_correct = self._correct(row["query"], row["expected_answer"], answer)
-        peak_mass = max(result_mass) if result_mass else 0.0
-        grounded_mass = sum(m for m, g in zip(result_mass, grounded) if g)
+        selected = [
+            i for i, mass in enumerate(result_mass)
+            if mass >= self.selection_threshold
+        ]
 
         return ProviderScore(
             qid=row["qid"], provider=row["provider"], n_results=len(results),
             grounded=grounded, result_mass=[round(m, 4) for m in result_mass],
-            kept=kept, latency_s=gen_s, tokenpath_seconds=timed.seconds,
-            answer=answer, answer_correct=answer_correct,
-            peak_mass=round(float(peak_mass), 4), grounded_mass=round(float(grounded_mass), 4),
+            selected=selected, latency_s=gen_s, tokenpath_seconds=timed.seconds,
         )
 
 
-def precision_before_after(scores: list[ProviderScore]) -> dict:
-    """Aggregate citation precision before vs after the mass filter, per provider.
+def precision_before_after_selection(scores: list[ProviderScore]) -> dict:
+    """Aggregate citation precision before and after selection, per provider.
 
     before = grounded fraction over ALL returned results (Exa's citation precision)
-    after  = grounded fraction over only the results the answer actually used
-    Rows where the filter kept nothing are excluded from `after` and counted.
+    after  = grounded fraction over the attribution-guided selected result set
+    Rows where selection returns nothing are excluded from `after` and counted.
     """
     import numpy as np
 
     by_provider: dict[str, list[ProviderScore]] = {}
-    for s in scores:
-        by_provider.setdefault(s.provider, []).append(s)
+    for score in scores:
+        by_provider.setdefault(score.provider, []).append(score)
 
     out = {}
     for provider, items in by_provider.items():
         before_vals, after_vals, empty = [], [], 0
-        for s in items:
-            if s.n_results:
-                before_vals.append(sum(s.grounded) / s.n_results)
-            if s.kept:
-                after_vals.append(sum(s.grounded[i] for i in s.kept) / len(s.kept))
+        for score in items:
+            if score.n_results:
+                before_vals.append(sum(score.grounded) / score.n_results)
+            if score.selected:
+                after_vals.append(
+                    sum(score.grounded[i] for i in score.selected) / len(score.selected)
+                )
             else:
                 empty += 1
         out[provider] = {
             "n_queries": len(items),
-            "citation_precision_before": round(float(np.mean(before_vals)), 4) if before_vals else 0.0,
-            "citation_precision_after": round(float(np.mean(after_vals)), 4) if after_vals else 0.0,
-            "queries_with_no_kept_results": empty,
+            "citation_precision_before_selection": (
+                round(float(np.mean(before_vals)), 4) if before_vals else 0.0
+            ),
+            "citation_precision_after_selection": (
+                round(float(np.mean(after_vals)), 4) if after_vals else 0.0
+            ),
+            "queries_with_no_selected_results": empty,
             "mean_results_returned": round(float(np.mean([s.n_results for s in items])), 2),
-            "mean_results_kept": round(float(np.mean([len(s.kept) for s in items])), 2),
+            "mean_results_selected": round(float(np.mean([len(s.selected) for s in items])), 2),
         }
     return out

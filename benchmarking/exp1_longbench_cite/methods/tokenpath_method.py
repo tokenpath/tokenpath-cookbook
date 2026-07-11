@@ -58,8 +58,6 @@ class TokenPathMethod(Method):
                  "source_start": cs, "source_end": ce}
                 for cs, ce, mass in spans
             ]
-            st["concentration"] = round(hm.concentration(s, e), 4)
-
         attributed_tokens = len(hm.answer_offsets) + len(hm.document_offsets)
         return CitedAnswer(
             idx=example["idx"],

@@ -29,7 +29,7 @@ Full plan is in the original task description; the harness implements it. See
 ## 2. Current state
 
 **Done — the entire harness is written, compiles, and all non-network logic is
-validated offline.** Three experiments:
+validated offline.** Two experiments:
 
 - **Exp 1 (LongBench-Cite)** — `benchmarking/exp1_longbench_cite/`
   Freeze one answer set (single generator, no citations), attribute it 4 ways
@@ -38,17 +38,13 @@ validated offline.** Three experiments:
   routed through OpenRouter. Table has F1/R/P + citation length + latency p50 +
   $/query + answer-preservation. Val/test threshold discipline + anchor re-judging.
 - **Exp 2 (WebCode)** — `benchmarking/exp2_webcode/`
-  Generate an answer from each provider's results, attribute it, filter results by
-  attribution mass under ONE shared threshold, recompute citation precision
-  before/after per provider. Chart + table.
-- **Exp 3** — `benchmarking/exp3_memorization/`
-  Rides on Exp 2 data. Splits correct answers into grounded-correct vs
-  memorized-correct, tests whether attribution mass separates them (AUC +
-  histogram). Self-verdicts "muddy → cut" if AUC ∈ [0.25, 0.75].
+  Generate an answer from each provider's results, attribute it, select results by
+  attribution mass under ONE shared threshold, and compare citation precision for
+  all returned results with the selected set. Chart + table.
 
 **What was validated offline** (no API): segmentation, judge `[[...]]` parsing,
 heatmap→mass math, split determinism + leak-freeness, precision aggregation,
-table/chart rendering, AUC. All 24 modules import and `py_compile` clean.
+and table/chart rendering. All Python modules import and `py_compile` clean.
 
 **What was NOT run:** anything touching a live API (see blocker below). So the
 API *response shapes* are implemented from the cookbook notebooks + public docs
@@ -198,7 +194,7 @@ if needed.
 benchmarking/
   config.py                 pins: models, judge, thresholds, dates, pricing, RunConfig
   common/
-    tokenpath.py            client (attribute + heatmap) + Heatmap mass/concentration math
+    tokenpath.py            client (attribute + heatmap) + Heatmap mass helpers
     openrouter.py           chat client, real cost via usage accounting, retries
     judge.py                LongCite auto_scorer port (verbatim prompts) via OpenRouter
     segment.py              shared sentence/statement segmentation
@@ -216,9 +212,8 @@ benchmarking/
     make_table.py           render results table (+ published + re-judged rows)
   exp2_webcode/
     load_data.py            WebCode loader + schema + --make-sample fixture
-    filter_and_score.py     generate -> ground -> attribute -> filter -> precision
+    select_and_score.py     generate -> ground -> attribute -> select -> precision
     run.py / make_chart.py  orchestrate + chart/table
-  exp3_memorization/run.py  grounded-vs-memorized mass separability (AUC + hist)
   scripts/run_all.sh        one command per table (SMOKE=1 for a tiny slice)
   results/                  outputs (summaries/tables/figures committed; caches gitignored)
   README.md                 repro doc
@@ -234,6 +229,6 @@ benchmarking/
 3. Decide pending items (§7) with the user.
 4. `tune_threshold` on val, then full Exp 1 on test; sanity-check numbers against
    the published anchors (LongCite-8B+SelfCite ≈ F1 0.78, GPT-4o judge).
-5. Assemble WebCode data → Exp 2 → Exp 3.
+5. Assemble WebCode data → Exp 2.
 6. Draft the post from the tables/figures (structure in the plan / README).
 7. Open a PR (user hasn't asked for one yet — confirm first).

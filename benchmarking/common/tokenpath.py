@@ -8,8 +8,7 @@ Two endpoints, mirroring the cookbook notebooks:
 The heatmap is what the benchmark leans on: from it we can compute, for any
 answer character span (a "statement"), how much attribution mass lands on each
 region of the document. That mass distribution is what we threshold into
-sentence-level citations, and its concentration is the confidence signal Exp 3
-tests against ground truth.
+sentence-level citations.
 
 Every call records wall-clock latency so the latency/$ column in the results
 table comes from real measurements, never estimates. Timing is captured with
@@ -188,8 +187,7 @@ class Heatmap:
         Keeps document tokens whose per-token mass fraction >= `threshold`,
         merges runs separated by <= `merge_gap_tokens`, and returns up to
         `max_spans` spans (by descending mass) as (char_start, char_end, mass).
-        The mass is the fraction of the statement's total mass inside the span —
-        this doubles as the citation's confidence in Exp 3.
+        The mass is the fraction of the statement's total mass inside the span.
         """
         mass = self.statement_mass(start, end)
         if mass.sum() == 0:
@@ -280,22 +278,6 @@ class Heatmap:
             ss, se = doc_sentence_spans[j]
             out.append((int(ss), int(se), float(sent_mass[j])))
         return out
-
-    def concentration(self, start: int, end: int) -> float:
-        """How peaked a statement's mass is on the document (Exp 3 signal).
-
-        Returns 1 - normalized entropy of the mass distribution: ~1 when the
-        statement's mass concentrates on a few document tokens (grounded),
-        ~0 when it is spread thin across the document (a hallmark of an answer
-        recalled from parametric memory rather than read off the context).
-        """
-        mass = self.statement_mass(start, end)
-        p = mass[mass > 0]
-        if p.size <= 1:
-            return 1.0 if p.size == 1 else 0.0
-        entropy = -(p * np.log(p)).sum()
-        return float(1.0 - entropy / np.log(p.size))
-
 
 def token_count_from_offsets(offsets: Iterable[tuple[int, int]]) -> int:
     return sum(1 for _ in offsets)

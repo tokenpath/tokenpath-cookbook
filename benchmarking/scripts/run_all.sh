@@ -30,7 +30,7 @@ python -m benchmarking.exp1_longbench_cite.run --split test "${LIM[@]}"
 # 4. render the table
 python -m benchmarking.exp1_longbench_cite.make_table
 
-echo "== Experiment 2: WebCode citation-precision filter =="
+echo "== Experiment 2: WebCode attribution-guided citation selection =="
 # Assemble benchmarking/data/webcode/webcode.jsonl from Exa's WebCode release +
 # your provider API calls (schema in exp2_webcode/load_data.py). To smoke-test
 # the wiring offline first:  python -m benchmarking.exp2_webcode.load_data --make-sample
@@ -39,8 +39,5 @@ DATA="benchmarking/data/webcode/webcode.jsonl"
   python -m benchmarking.exp2_webcode.load_data --make-sample
 python -m benchmarking.exp2_webcode.run --data "$DATA"
 python -m benchmarking.exp2_webcode.make_chart
-
-echo "== Experiment 3: memorization detection (rides on Exp 2 data) =="
-python -m benchmarking.exp3_memorization.run
 
 echo "== done. Tables + figures in benchmarking/results/ =="

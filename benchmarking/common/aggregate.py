@@ -105,8 +105,8 @@ def aggregate(hm, start, end, doc_sentence_spans, cfg=None, answer_text=None):
         return []
     share = score / total  # fraction of the statement's (post-transform) mass per sentence
 
-    # concentration filter: drop sentences whose mass is spread thin across their
-    # own doc tokens (a hallmark of diffuse, non-supporting attention) -> precision.
+    # Concentration heuristic: omit sentences whose mass is spread thin across
+    # their own document tokens; evaluate its effect with citation precision.
     if c["min_conc"] > 0:
         pooled = np.zeros(hm.matrix.shape[1])
         for r in rows:

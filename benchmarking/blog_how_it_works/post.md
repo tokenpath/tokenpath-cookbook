@@ -339,7 +339,7 @@ itself doesn't change; aggregation only decides how to *report* it.
 
 ---
 
-## 4. How good is it, and is it faithful?
+## 4. How good is it, and what does it measure?
 
 **Quality.** On [LongBench-Cite](https://github.com/THUDM/LongCite) (a benchmark
 we didn't write), post-hoc attention attribution lands within a few points of
@@ -350,22 +350,18 @@ any model's output.** It beats naive retrieval (0.62) outright, with precision
 cost/quality frontier, and honest limitations:
 **[How good are post-hoc citations? →](../blog/post.md)**
 
-**Faithfulness.** There's a real argument this is more *trustworthy* than asking an
-LLM to cite, not just cheaper. A prompted "add citations" pass is a post-hoc
-rationalization — a second judgment that can confidently invent a citation for an
-answer span that actually came from the model's parametric memory, not the
-document. Attention attribution reports a property of the computation that produced
-the text: if the answer drew on a source token, there's mass; if it didn't, the
-mass is diffuse and there's nothing to cite — *and that diffuseness is itself a
-signal.* TokenPath exposes it as a concentration score, so an ungrounded claim
-reads as ungrounded instead of getting a confident fake citation.
+**What it measures.** TokenPath re-reads the `(document, question, answer)` tuple
+with an open reference model and uses attention to associate answer spans with
+source spans. The output is citation-oriented source attribution: cited text,
+character offsets, and an attribution score that applications can render or
+aggregate. LongBench-Cite evaluates those source associations as citations using
+recall, precision, and F1.
 
-The honest caveats: TokenPath reads a *reference* open model's attention, not
-necessarily the exact model that wrote your answer — so it measures "how a capable
-reader grounds this answer in this source," not a literal trace of the original
-generation. And attention is a strong signal of what was used, not a formal proof.
-But compared to a second LLM guessing after the fact, grounding citations in the
-actual attention computation is a meaningfully more faithful place to stand.
+The important scope is that TokenPath reads a *reference* open model's attention,
+not necessarily the exact model that wrote the answer. The result is therefore a
+post-hoc source association rather than a literal trace of the original generation.
+That same setup is what lets it attribute output from any model without changing
+the generation stack.
 
 ---
 

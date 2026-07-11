@@ -121,9 +121,9 @@ EMBED_TOP_K = 5  # candidates retrieved by cosine, then reranked
 # Kept-citation bar: post-sigmoid rerank score when a reranker is set, else cosine.
 EMBED_SCORE_THRESHOLD = 0.70  # post-sigmoid rerank bar (bge scores compress to ~0.5-0.73)
 
-# Exp 2: single attribution-mass threshold applied identically to every search
-# provider (no per-provider tuning — stated explicitly in the post).
-WEBCODE_MASS_THRESHOLD = 0.15
+# Exp 2: single attribution-mass selection threshold applied identically to every
+# search provider (no per-provider tuning — stated explicitly in the post).
+WEBCODE_SELECTION_THRESHOLD = 0.15
 
 
 @dataclass

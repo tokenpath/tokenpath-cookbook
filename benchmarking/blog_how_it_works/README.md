@@ -4,7 +4,7 @@ The internals/explainer post, written **cookbook-first**: a short intro, then
 mostly runnable code with real outputs — turn the attention heatmap into a
 citation, three things string matching can't do (cross-lingual, paraphrase,
 tables), an optional raw-Transformers reproduction on Llama-3.1-8B, and the
-benchmark + faithfulness wrap-up.
+benchmark + measurement-scope wrap-up.
 
 ## Files
 - **`post.md`** — the blog post (Markdown), cookbook-style. Every code block's
