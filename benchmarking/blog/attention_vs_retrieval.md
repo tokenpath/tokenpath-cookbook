@@ -59,7 +59,8 @@ retriever is systematically pulled toward the wrong (but similar-looking)
 sentence. TokenPath's citation **is** the generating model's attention, which
 already tracked the entity across the coreference chain — so it lands on the
 sentence that actually carries the fact. That's a class of citation retrieval
-structurally can't get right, and it shows up across the benchmark (256 such
-statements where TokenPath was supported and embedding was not).
+structurally can't get right, and it shows up across the benchmark (279 such
+statements where TokenPath was supported and embedding was not, as of the
+2026-07-15 Qwen3.5-9B run).
 
 *(Raw records: `data/attention_vs_retrieval_examples.json`.)*

@@ -56,7 +56,7 @@ We report **reported-average F1** (the LongCite convention: mean over datasets, 
 |---|---|---|---|---|---|---|
 | Prompted — gpt-5.5 add-citations *(post-hoc LLM)* | 0.840 | 0.885 | **0.851** | 35 | 8.3 s | $0.090 |
 | **TokenPath** *(post-hoc attention)* | 0.735 | 0.938 | **0.815** | 114 | **1.60 s** | **$0.013** |
-| Citations API — native *(Sonnet-5, generation-time)* | 0.761 | 0.915 | **0.812** | 177 | 9.9 s | $0.093 |
+| Anthropic Citations — native *(Sonnet-5, generation-time)* | 0.761 | 0.915 | **0.812** | 177 | 9.9 s | $0.093 |
 | Embedding retrieve+rerank *(post-hoc)* | 0.645 | 0.630 | 0.622 | 34 | ~1 s + index¹ | $0.0014 |
 
 ¹ Embedding is the only method with a separate one-time **indexing** cost (embed every document sentence, ~6 s, amortized across queries in real RAG). Per-query retrieval tunes to ~1 s on a colocated/GPU stack. TokenPath, Citations API, and prompted have no index — they read `(doc, answer)` in one pass.
@@ -77,7 +77,7 @@ The story is a Pareto frontier with two points on it: the prompted LLM buys the 
 
 TokenPath is strongest on extractive QA and weakest on abstractive summarization, as expected — see "the honest limitation" below. *(Chart data: `data/per_dataset_f1.csv`.)*
 
-| Dataset | Prompted | Citations API | TokenPath | Embedding |
+| Dataset | Prompted | Anthropic Citations | TokenPath | Embedding |
 |---|---|---|---|---|
 | gov_report (summary) | 0.972 | 0.947 | 0.897 | 0.843 |
 | hotpotqa (multi-hop QA) | 0.811 | 0.732 | 0.811 | 0.657 |
