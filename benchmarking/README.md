@@ -66,6 +66,7 @@ pip install -r benchmarking/requirements.txt
 #   pip install sentence-transformers transformers
 
 export TOKENPATH_API_KEY=tpk_...        # https://platform.tokenpath.ai
+export TP_TOKENPATH_BACKEND_ID=qwen-... # optional cache/provenance tag; change with backend
 export OPENROUTER_API_KEY=sk-or-...      # generator + prompted baseline + judge
 export ANTHROPIC_API_KEY=sk-ant-...      # optional: Citations API baseline only
 ```

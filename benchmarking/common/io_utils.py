@@ -16,6 +16,9 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Callable, Iterable
 
 
+_SIGNATURE_NOT_PROVIDED = object()
+
+
 def ensure_dir(path: str) -> str:
     os.makedirs(path, exist_ok=True)
     return path
@@ -35,8 +38,37 @@ def append_jsonl(path: str, record: dict) -> None:
         f.flush()
 
 
-def load_done_ids(path: str, key: str = "idx") -> set:
-    return {r[key] for r in read_jsonl(path) if key in r}
+def is_error_record(record: dict) -> bool:
+    """Whether a cached record represents a failed attempt, not completed work."""
+    return "error" in (record.get("extra") or {})
+
+
+def record_cache_signature(record: dict) -> Any:
+    """Return the producer signature stamped into a cached record, if any."""
+    return (record.get("extra") or {}).get("cache_signature")
+
+
+def load_done_ids(
+    path: str,
+    key: str = "idx",
+    expected_signature: Any = _SIGNATURE_NOT_PROVIDED,
+) -> set:
+    """Return successfully completed IDs using the latest attempt for each ID.
+
+    Failed attempts remain in JSONL as diagnostics but must be retryable. Using
+    last-write-wins also lets a later successful retry supersede the old error.
+    """
+    records = [r for r in read_jsonl(path) if key in r]
+    latest = dedup_by(records, key=key)
+    return {
+        r[key]
+        for r in latest
+        if not is_error_record(r)
+        and (
+            expected_signature is _SIGNATURE_NOT_PROVIDED
+            or record_cache_signature(r) == expected_signature
+        )
+    }
 
 
 def parallel_append(
@@ -99,3 +131,8 @@ def dedup_by(records: Iterable[dict], key: str = "idx") -> list[dict]:
     for r in records:
         seen[r[key]] = r
     return list(seen.values())
+
+
+def read_jsonl_latest(path: str, key: str = "idx") -> list[dict]:
+    """Read an append-only JSONL cache with the newest record winning per key."""
+    return dedup_by((r for r in read_jsonl(path) if key in r), key=key)

@@ -16,6 +16,9 @@ price them at config.TOKENPATH_USD_PER_MTOK.
 
 from __future__ import annotations
 
+import hashlib
+import json
+
 from ... import config
 from ...common import aggregate as agg
 from ...common.segment import statement_spans
@@ -30,17 +33,57 @@ class TokenPathMethod(Method):
     def __init__(
         self,
         client: TokenPathClient,
-        agg_cfg: dict | None = None,
+        mass_threshold: float | dict | None = None,
         usd_per_mtok: float = config.TOKENPATH_USD_PER_MTOK,
+        *,
+        agg_cfg: dict | None = None,
     ):
+        # Before the aggregation refactor the second positional argument was a
+        # mass threshold. Accept both that API and the short-lived positional
+        # agg_cfg API so existing cookbook callers continue to work.
+        if isinstance(mass_threshold, dict):
+            if agg_cfg is not None:
+                raise TypeError("pass aggregation config only once")
+            agg_cfg = mass_threshold
+            mass_threshold = None
+
         self.client = client
         # Tuned aggregation (row-norm + threshold 0.30 + passage-merge) — see
         # config.TOKENPATH_AGG and common/aggregate.py.
-        self.agg_cfg = agg_cfg if agg_cfg is not None else config.TOKENPATH_AGG
+        selected_cfg = config.TOKENPATH_AGG if agg_cfg is None else agg_cfg
+        # Resolve optional keys once. This keeps aggregation and recorded
+        # metadata on the exact same effective configuration.
+        self.agg_cfg = {**agg.BASELINE, **selected_cfg}
+        if mass_threshold is not None:
+            self.agg_cfg["threshold"] = float(mass_threshold)
+        self.mass_threshold = self.agg_cfg["threshold"]
         self.usd_per_mtok = usd_per_mtok
+        self.cache_signature = {
+            "agg_cfg": dict(self.agg_cfg),
+            "usd_per_mtok": self.usd_per_mtok,
+            "api_url": getattr(self.client, "api_url", None),
+            "backend_id": config.TOKENPATH_BACKEND_ID,
+        }
+
+    def cache_signature_for(self, example: dict, answer: str) -> dict:
+        inputs = json.dumps(
+            {
+                "document": example["context"],
+                "query": example["query"],
+                "answer": answer,
+            },
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+        return {
+            **self.cache_signature,
+            "input_sha256": hashlib.sha256(inputs).hexdigest(),
+        }
 
     def cite(self, example: dict, answer: str) -> CitedAnswer:
         document, query = example["context"], example["query"]
+        cache_signature = self.cache_signature_for(example, answer)
         timed = self.client.heatmap(document, query, answer)
         hm = Heatmap.from_response(timed.value)
 
@@ -73,5 +116,7 @@ class TokenPathMethod(Method):
                 "answer_tokens": len(hm.answer_offsets),
                 "document_tokens": len(hm.document_offsets),
                 "mass_threshold": self.mass_threshold,
+                "agg_cfg": dict(self.agg_cfg),
+                "cache_signature": cache_signature,
             },
         )

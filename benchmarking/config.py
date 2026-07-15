@@ -28,6 +28,9 @@ DEFAULT_RUN_DATE = "2026-07-07"
 # Endpoints                                                                   #
 # --------------------------------------------------------------------------- #
 TOKENPATH_API_URL = os.environ.get("TOKENPATH_API_URL", "https://api.tokenpath.ai")
+# Optional backend/revision label for cache provenance when the same API URL is
+# switched between implementations (for example llama vs qwen).
+TOKENPATH_BACKEND_ID = os.environ.get("TP_TOKENPATH_BACKEND_ID", "")
 OPENROUTER_API_URL = os.environ.get("OPENROUTER_API_URL", "https://openrouter.ai/api/v1")
 # The Anthropic Citations API is a proprietary feature not exposed through
 # OpenRouter's normalized chat API, so that one baseline talks to Anthropic
@@ -113,7 +116,12 @@ TOKENPATH_MASS_THRESHOLD = 0.30
 #   row_norm       one-token-one-vote (stops a few high-magnitude tokens dominating)
 #   threshold 0.30 higher mass bar -> drops junk citations -> precision + cleaner support
 #   merge_adjacent fold adjacent supporting sentences into one passage -> recall
-TOKENPATH_AGG = {"threshold": 0.30, "row_norm": True, "merge_adjacent": True, "max_spans": 4}
+TOKENPATH_AGG = {
+    "threshold": TOKENPATH_MASS_THRESHOLD,
+    "row_norm": True,
+    "merge_adjacent": True,
+    "max_spans": 4,
+}
 
 # Embedding baseline: retrieve top-k context sentences per statement, keep those
 # whose rerank score clears the threshold (also tuned on val).
@@ -152,5 +160,6 @@ class RunConfig:
             "tokenpath_mass_threshold": self.tokenpath_mass_threshold,
             "seed": self.seed,
             "tokenpath_api_url": TOKENPATH_API_URL,
+            "tokenpath_backend_id": TOKENPATH_BACKEND_ID,
             "openrouter_api_url": OPENROUTER_API_URL,
         }

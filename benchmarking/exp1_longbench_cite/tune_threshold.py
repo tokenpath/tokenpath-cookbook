@@ -20,6 +20,7 @@ import numpy as np
 from tqdm import tqdm
 
 from .. import config
+from ..common import aggregate as agg
 from ..common import env
 from ..common.io_utils import read_jsonl, write_json
 from ..common.judge import CitationJudge
@@ -38,6 +39,7 @@ def _score_threshold(threshold, heatmaps, examples, frozen, client, judge_model,
     Each val answer is judged independently, so we fan the judging out across
     threads (a fresh CitationJudge per record; the HTTP client is shared)."""
     recs = []
+    candidate_cfg = {**config.TOKENPATH_AGG, "threshold": threshold}
     for e in examples:
         idx = e["idx"]
         if idx not in heatmaps or idx not in frozen:
@@ -47,7 +49,14 @@ def _score_threshold(threshold, heatmaps, examples, frozen, client, judge_model,
         statements = empty_statements(answer)
         for st in statements:
             s, en = st["span"]
-            spans = hm.mass_to_sentences(s, en, doc_sents[idx], threshold)
+            spans = agg.aggregate(
+                hm,
+                s,
+                en,
+                doc_sents[idx],
+                candidate_cfg,
+                answer_text=answer,
+            )
             st["citation"] = [{"cite": e["context"][cs:ce]} for cs, ce, _ in spans]
         recs.append((e["dataset"],
                      {"query": e["query"], "prediction": answer, "statements": statements}))
@@ -118,6 +127,7 @@ def main():
         "judge_model": config.JUDGE_MODEL,
         "judge_cost_usd": round(total_cost, 4),
         "n_val_examples": len(heatmaps),
+        "best_agg_cfg": {**config.TOKENPATH_AGG, "threshold": float(best)},
     }
     write_json(os.path.join(RESULTS_DIR, "exp1_threshold.json"), out)
     print(f"best threshold = {best} (val F1 {results[best]}) -> exp1_threshold.json")

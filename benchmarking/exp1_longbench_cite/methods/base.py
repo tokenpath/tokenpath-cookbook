@@ -66,5 +66,9 @@ class Method:
 
     name = "base"
 
+    def cache_signature_for(self, example: dict, answer: str):
+        """Return method-specific cache provenance, if the method defines it."""
+        return getattr(self, "cache_signature", None)
+
     def cite(self, example: dict, answer: str) -> CitedAnswer:  # pragma: no cover
         raise NotImplementedError

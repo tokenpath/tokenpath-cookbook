@@ -27,8 +27,9 @@ from .. import config
 from ..common import env
 from ..common.cite_len import backend as cite_len_backend
 from ..common.cite_len import mean_citation_len
-from ..common.io_utils import (append_jsonl, load_done_ids, parallel_append,
-                               read_json, read_jsonl, write_json)
+from ..common.io_utils import (is_error_record, parallel_append, read_json,
+                               read_jsonl, read_jsonl_latest,
+                               record_cache_signature, write_json)
 from ..common.judge import CitationJudge
 from ..common.timing import MethodCost
 from . import freeze_answers, load_data
@@ -45,7 +46,10 @@ def build_method(name: str, cfg: config.RunConfig):
     if name == "tokenpath":
         from .methods.tokenpath_method import TokenPathMethod
 
-        return TokenPathMethod(env.tokenpath_client())  # uses config.TOKENPATH_AGG
+        return TokenPathMethod(
+            env.tokenpath_client(),
+            mass_threshold=cfg.tokenpath_mass_threshold,
+        )
     if name == "prompted":
         from .methods.prompted_method import PromptedMethod
 
@@ -69,23 +73,53 @@ def build_method(name: str, cfg: config.RunConfig):
 # --------------------------------------------------------------------------- #
 def cite_stage(name: str, method, examples: list[dict], frozen: dict[str, str]) -> str:
     out = os.path.join(RESULTS_DIR, f"exp1_cited_{name}.jsonl")
-    done = load_done_ids(out)
+    cached = {r["idx"]: r for r in read_jsonl_latest(out)}
+
+    def signature_for(e: dict):
+        fn = getattr(method, "cache_signature_for", None)
+        return (
+            fn(e, frozen[e["idx"]])
+            if fn is not None
+            else getattr(method, "cache_signature", None)
+        )
+
+    done = {
+        e["idx"]
+        for e in examples
+        if e["idx"] in frozen
+        and (rec := cached.get(e["idx"])) is not None
+        and not is_error_record(rec)
+        and record_cache_signature(rec) == signature_for(e)
+    }
     todo = [e for e in examples if e["idx"] not in done and e["idx"] in frozen]
     print(f"[{name}] cite: {len(done)} cached, {len(todo)} to do")
 
     def worker(e: dict) -> dict:
+        signature = signature_for(e)
         try:
             return method.cite(e, frozen[e["idx"]]).to_record()
         except Exception as exc:  # keep going; a failed example is logged, not fatal
             return {"idx": e["idx"], "dataset": e["dataset"], "query": e["query"],
                     "prediction": frozen[e["idx"]], "statements": [], "method": name,
-                    "latency_s": 0.0, "cost_usd": 0.0, "extra": {"error": str(exc)[:300]}}
+                    "latency_s": 0.0, "cost_usd": 0.0,
+                    "extra": {"error": str(exc)[:300], "cache_signature": signature}}
 
     # Embedding runs local torch inference (GIL-bound, not thread-safe) -> serial.
     # TokenPath's API is rate-limited (429s under high concurrency) -> modest pool
     # + client-side backoff. The OpenAI/Anthropic-backed methods tolerate more.
     workers = {"embedding": 1, "tokenpath": 4}.get(name, 8)
     parallel_append(out, todo, worker, workers=workers, desc=f"cite:{name}")
+
+    requested = {e["idx"] for e in examples if e["idx"] in frozen}
+    failures = [r for r in read_jsonl_latest(out)
+                if r["idx"] in requested and is_error_record(r)]
+    if failures:
+        first = (failures[0].get("extra") or {}).get("error", "unknown error")
+        raise RuntimeError(
+            f"[{name}] cite failed for {len(failures)}/{len(requested)} example(s); "
+            f"refusing to judge an incomplete run. Rerun retries only those failures. "
+            f"First error: {first}"
+        )
     return out
 
 
@@ -94,9 +128,27 @@ def cite_stage(name: str, method, examples: list[dict], frozen: dict[str, str]) 
 # --------------------------------------------------------------------------- #
 def judge_stage(name: str, cited_path: str, cfg: config.RunConfig) -> str:
     out = os.path.join(RESULTS_DIR, f"exp1_judged_{name}.jsonl")
-    done = load_done_ids(out)
-    cited = [r for r in read_jsonl(cited_path) if r["idx"] not in done]
-    print(f"[{name}] judge: {len(done)} cached, {len(cited)} to do")
+    judged_by_idx = {r["idx"]: r for r in read_jsonl_latest(out)}
+    cited_records = read_jsonl_latest(cited_path)
+    failures = [r for r in cited_records if is_error_record(r)]
+    if failures:
+        raise RuntimeError(
+            f"[{name}] cited cache still contains {len(failures)} failed record(s); "
+            "rerun the cite stage before judging"
+        )
+
+    def is_current(rec: dict) -> bool:
+        cached = judged_by_idx.get(rec["idx"])
+        return bool(
+            cached
+            and cached.get("judge_model") == cfg.judge_model
+            and record_cache_signature(cached) == record_cache_signature(rec)
+            and is_error_record(cached) == is_error_record(rec)
+            and "citation_f1" in cached
+        )
+
+    cited = [r for r in cited_records if not is_current(r)]
+    print(f"[{name}] judge: {len(cited_records) - len(cited)} cached, {len(cited)} to do")
     client = env.openrouter_client()  # shared client; each worker gets its own judge
 
     def worker(rec: dict) -> dict:
@@ -105,9 +157,27 @@ def judge_stage(name: str, cited_path: str, cfg: config.RunConfig) -> str:
         judge = CitationJudge(client, cfg.judge_model)
         scored = judge.get_citation_score(dict(rec), max_statement_num=40)
         scored["judge_cost_usd"] = judge.cost_usd
+        scored["judge_model"] = cfg.judge_model
         return scored
 
     parallel_append(out, cited, worker, workers=12, desc=f"judge:{name}")
+
+    latest = {r["idx"]: r for r in read_jsonl_latest(out)}
+    missing = [
+        r["idx"] for r in cited_records
+        if not (
+            (cached := latest.get(r["idx"]))
+            and cached.get("judge_model") == cfg.judge_model
+            and record_cache_signature(cached) == record_cache_signature(r)
+            and is_error_record(cached) == is_error_record(r)
+            and "citation_f1" in cached
+        )
+    ]
+    if missing:
+        raise RuntimeError(
+            f"[{name}] judge did not complete {len(missing)} record(s); rerun resumes "
+            f"the missing IDs. First missing idx: {missing[0]}"
+        )
     return out
 
 
@@ -115,8 +185,27 @@ def judge_stage(name: str, cited_path: str, cfg: config.RunConfig) -> str:
 # Stage 4: aggregate                                                          #
 # --------------------------------------------------------------------------- #
 def aggregate(name: str, judged_path: str, cited_path: str, cfg: config.RunConfig) -> dict:
-    judged = read_jsonl(judged_path)
-    cited = {r["idx"]: r for r in read_jsonl(cited_path)}
+    judged = read_jsonl_latest(judged_path)
+    cited = {r["idx"]: r for r in read_jsonl_latest(cited_path)}
+    failures = [r for r in judged if is_error_record(r)] + [
+        r for r in cited.values() if is_error_record(r)
+    ]
+    if failures:
+        raise RuntimeError(
+            f"[{name}] caches still contain {len(failures)} failed record(s); "
+            "rerun cite and judge before aggregating"
+        )
+    stale = [
+        r for r in judged
+        if (source := cited.get(r["idx"])) is None
+        or r.get("judge_model") != cfg.judge_model
+        or record_cache_signature(r) != record_cache_signature(source)
+    ]
+    if stale or len(judged) != len(cited):
+        raise RuntimeError(
+            f"[{name}] cite/judge caches are incomplete or out of sync; "
+            "rerun cite and judge before aggregating"
+        )
 
     by_ds: dict[str, list[dict]] = {}
     cost = MethodCost(name)
