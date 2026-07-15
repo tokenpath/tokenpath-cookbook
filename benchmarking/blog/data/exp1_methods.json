@@ -40,6 +40,28 @@
     "kind": "generation-time (regenerates)"
   },
   "tokenpath_tuned": {
+    "f1_reported": 0.8147,
+    "recall_reported": 0.7354,
+    "precision_reported": 0.9382,
+    "f1_example_mean": 0.832,
+    "recall_example_mean": 0.7667,
+    "precision_example_mean": 0.9342,
+    "cite_len_glm4": 114.1,
+    "cites_per_stmt": 0.74,
+    "n": 480,
+    "per_dataset_f1": {
+      "gov_report": 0.897,
+      "hotpotqa": 0.8108,
+      "longbench-chat": 0.7362,
+      "multifieldqa_en": 0.8057
+    },
+    "latency_p50_s": 1.6,
+    "usd_per_query": 0.013,
+    "kind": "post-hoc attention",
+    "run_date": "2026-07-15",
+    "note": "Run against the hosted API after the 2026-07 reference-model upgrade (Llama-3.1-8B -> Qwen3.5-9B); same tuned aggregation config as the original run."
+  },
+  "tokenpath_tuned_llama31_archived": {
     "f1_reported": 0.785,
     "recall_reported": 0.7118,
     "precision_reported": 0.8978,
@@ -57,7 +79,8 @@
     },
     "latency_p50_s": 1.68,
     "usd_per_query": 0.0125,
-    "kind": "post-hoc attention"
+    "kind": "post-hoc attention (archived: pre-upgrade Llama-3.1-8B reference model)",
+    "run_date": "2026-07-09"
   },
   "tokenpath_baseline": {
     "f1_reported": 0.7232,

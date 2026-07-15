@@ -1,5 +1,5 @@
 method,gov_report,hotpotqa,longbench-chat,multifieldqa_en
 Prompted (gpt-5.5),0.9724,0.8105,0.7689,0.8539
 Citations API (Sonnet-5),0.947,0.7318,0.7584,0.8073
-TokenPath,0.8541,0.802,0.6988,0.7993
+TokenPath,0.897,0.8108,0.7362,0.8057
 Embedding retrieve+rerank,0.843,0.6574,0.3669,0.7053

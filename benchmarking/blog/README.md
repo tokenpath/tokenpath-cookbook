@@ -12,7 +12,7 @@ Everything needed to publish the Experiment-1 benchmark post.
 |---|---|
 | `main_comparison.csv` | The 4-method headline table: recall, precision, F1 (reported-avg + example-mean), citation length, cites/statement, latency p50, $/query. |
 | `per_dataset_f1.csv` | F1 per dataset (gov_report / hotpotqa / longbench-chat / multifieldqa_en) × method. |
-| `tokenpath_tuning_trajectory.csv` | TokenPath F1 across the four aggregation-tuning steps (0.722 → 0.785). |
+| `tokenpath_tuning_trajectory.csv` | TokenPath F1 across the four aggregation-tuning steps (0.722 → 0.785; original Llama-3.1-8B-era run — the resulting config is what the current 0.815 run uses). |
 | `exp1_methods.json` | Full per-method detail (both F1 conventions, per-dataset F1, R/P, cite length, cites/stmt, latency, cost, kind) — the source of truth. |
 | `sweep_leaderboard_dev.json` / `sweep_leaderboard_full.json` | Every aggregation config tried (dev error set + full-test validation), incl. the rejected ones. |
 

@@ -6,6 +6,12 @@ model's output. This post is mostly code: we'll call the API, watch attention
 turn into citations, do three things string matching can't, and then drop down to
 raw Transformers to prove the signal is really the model's own attention.*
 
+> **Updated 2026-07-15.** The hosted API's open reference model was upgraded
+> (the API sections' outputs below were re-run against the current API on that
+> date — confidences and heatmap shapes shifted a little, every conclusion
+> holds). The raw-Transformers section is pinned to Llama-3.1-8B-Instruct and
+> is unaffected.
+
 > **Run it yourself.** Everything here is in a runnable notebook —
 > [`how-tokenpath-works.ipynb`](../../notebooks/how-tokenpath-works.ipynb)
 > ([open in Colab](https://colab.research.google.com/github/tokenpath/tokenpath-cookbook/blob/main/notebooks/how-tokenpath-works.ipynb)).
@@ -30,7 +36,9 @@ Two consequences worth keeping in mind as you read the code:
   mechanism the text was produced through.
 - **It's model-agnostic.** Your answer can come from GPT-5.5, Claude, your
   fine-tune — TokenPath re-reads the `(document, answer)` pair through an open
-  reference model (Llama-3.1-8B-Instruct) and measures where attention lands.
+  reference model and measures where attention lands. Which reference model is
+  an API implementation detail that improves over time; §3 re-derives the
+  mechanism on a pinned one (Llama-3.1-8B-Instruct) you can run yourself.
 
 Let's watch it happen.
 
@@ -62,8 +70,8 @@ print("shape [answer_tokens, document_tokens]:", h["shape"])
 print("non-zero attention entries:", len(h["data"]))
 ```
 ```
-shape [answer_tokens, document_tokens]: [8, 44]
-non-zero attention entries: 48
+shape [answer_tokens, document_tokens]: [8, 46]
+non-zero attention entries: 174
 ```
 
 Densify it and pool each answer token's attention onto **document sentences** —
@@ -88,8 +96,8 @@ for sent, share in cite_sentences(h, document):
     print(f"[{share:5.1%}] {sent}")
 ```
 ```
-[74.8%] The mascot wears a green and yellow costume and a green beanie cap.
-[23.0%] The Oregon Duck is the mascot of the University of Oregon.
+[75.5%] The mascot wears a green and yellow costume and a green beanie cap.
+[17.4%] The Oregon Duck is the mascot of the University of Oregon.
 ```
 
 Look at *which* sentence wins. The answer is about "the Oregon Duck," but the
@@ -116,7 +124,7 @@ src = attribute_span(document, "What colors does the Oregon Duck wear?",
 print(src["text"], f"(confidence {src['confidence']:.2f})")
 ```
 ```
-green and yellow (confidence 0.74)
+green and yellow (confidence 0.88)
 ```
 
 ---
@@ -156,8 +164,8 @@ for label, s in [("effective-date claim", d1), ("first-day claim", d2)]:
           f"(conf {src['confidence']:.2f})")
 ```
 ```
-effective-date claim   -> doc[64:77]  ...") is made effective as of March 2, 2026...  (conf 0.97)
-first-day claim        -> doc[215:228]  ... day of employment will be March 2, 2026...  (conf 0.71)
+effective-date claim   -> doc[64:77]  ...") is made effective as of March 2, 2026...  (conf 0.81)
+first-day claim        -> doc[215:228]  ... day of employment will be March 2, 2026...  (conf 0.67)
 ```
 
 Two identical answer dates, two **different** source spans — each claim resolved to
@@ -177,7 +185,7 @@ src = attribute_span(doc, "How tall is the Zugspitze?",
 print(src["text"], f"(confidence {src['confidence']:.2f})")
 ```
 ```
-2.962 (confidence 0.92)
+2.962 Metern (confidence 0.94)
 ```
 
 An English answer, a German source, **zero shared tokens** — and it lands on
@@ -200,12 +208,12 @@ for sent, share in cite_sentences(h, doc):
     print(f"[{share:5.1%}] {sent}")
 ```
 ```
-[91.8%] Under the Constitution, principal officers are appointed by the President by and with the advice and consent of the Senate.
-[ 8.2%] Inferior officers may be appointed by department heads alone.
+[90.0%] Under the Constitution, principal officers are appointed by the President by and with the advice and consent of the Senate.
+[10.0%] Inferior officers may be appointed by department heads alone.
 ```
 
-**91.8%** of the answer's attention lands on the advice-and-consent sentence,
-8.2% on the plausible distractor — despite the answer and source sharing only the
+**90.0%** of the answer's attention lands on the advice-and-consent sentence,
+10.0% on the plausible distractor — despite the answer and source sharing only the
 word "Senate." Attention connects them because the model *paraphrased from* that
 span.
 
@@ -221,7 +229,7 @@ src = attribute_span(doc, "What was Cloud Q4 revenue?",
 print(src["text"], f"(confidence {src['confidence']:.2f})")
 ```
 ```
-52.6 (confidence 0.69)
+52.6 (confidence 0.85)
 ```
 
 A grid full of similar-looking numbers, and it pins the **exact cell** — the
@@ -239,8 +247,10 @@ cite the whole table; string search can't tell one number from another.
 ## 3. Is this really the model's attention?
 
 Everything above went through the hosted API. Fair to be skeptical — so here's the
-same quantity from raw 🤗 Transformers on Llama-3.1-8B-Instruct, ~40 lines, no
-TokenPath involved. This is **not** how the hosted API is implemented (that has to
+same measurement from raw 🤗 Transformers, ~40 lines, no TokenPath involved. This
+section is pinned to **Llama-3.1-8B-Instruct** — the reference model the API served
+at launch — so it reproduces exactly even as the hosted API's reference model
+changes. This is **not** how the hosted API is implemented (that has to
 be fast on 100k-token documents — see §3.3); it's the simplest thing that computes
 the same number, so you can check it.
 
@@ -276,8 +286,10 @@ Top cited sentences (answer-attention mass):
   [18.3%]  The Oregon Duck is the mascot of the University of Oregon.
 ```
 
-Same answer as the API: attention, read straight off Llama's forward pass, lands
-on "The mascot" sentence. (Full runnable version in the notebook's optional
+Same verdict as the API: attention, read straight off Llama's forward pass, lands
+on "The mascot" sentence. (The exact shares differ from §1 — that was the API's
+current reference model, this is pinned Llama — but both put ~4× more mass on the
+fact sentence than on the name sentence.) (Full runnable version in the notebook's optional
 local-model section, and in [`reproduce_attention.py`](reproduce_attention.py).)
 
 ### 3.2 Which heads? Not all of them
@@ -306,7 +318,10 @@ is exactly the band we averaged over in §3.1. (Runnable, on synthetic data you 
 read, in [`find_attribution_heads.py`](find_attribution_heads.py). Production head
 selection is this same idea run as a much larger, careful battery, combined with a
 learned weighting rather than a flat average — but the shape is exactly this: find
-the heads that attribute, ignore the rest. We don't disclose the shipped set.)
+the heads that attribute, ignore the rest. We don't disclose the shipped set. It's
+also what makes the reference model swappable: point the battery at a new open
+model and it finds that model's attribution heads — which is how the API's
+2026-07 reference-model upgrade was qualified.)
 
 ### 3.3 The catch: long context
 
@@ -342,11 +357,11 @@ itself doesn't change; aggregation only decides how to *report* it.
 ## 4. How good is it, and what does it measure?
 
 **Quality.** On [LongBench-Cite](https://github.com/THUDM/LongCite) (a benchmark
-we didn't write), post-hoc attention attribution lands within a few points of
-frontier-LLM citation quality — **F1 0.785** vs 0.81–0.85 for LLM-based methods —
-while being **~6× faster, ~7× cheaper, needing no document index, and working on
-any model's output.** It beats naive retrieval (0.62) outright, with precision
-(0.90) right alongside the LLM methods. Full methodology, per-dataset numbers, the
+we didn't write), post-hoc attention attribution now matches generation-time
+citation quality — **F1 0.815**, ahead of Anthropic's Citations API (0.812), with
+only a prompted frontier LLM ahead (0.851) — while being **~6× faster, ~7×
+cheaper, needing no document index, and working on any model's output.** It beats
+naive retrieval (0.62) outright, with the highest precision of any method (0.94). Full methodology, per-dataset numbers, the
 cost/quality frontier, and honest limitations:
 **[How good are post-hoc citations? →](../blog/post.md)**
 
