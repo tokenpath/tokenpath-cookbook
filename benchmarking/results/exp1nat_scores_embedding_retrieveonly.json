@@ -1,0 +1,64 @@
+{
+  "method": "embedding",
+  "n_examples": 480,
+  "per_dataset": {
+    "gov_report": {
+      "n": 160,
+      "citation_recall": 0.8723,
+      "citation_precision": 0.6637,
+      "citation_f1": 0.7506
+    },
+    "hotpotqa": {
+      "n": 160,
+      "citation_recall": 0.6949,
+      "citation_precision": 0.4549,
+      "citation_f1": 0.5234
+    },
+    "longbench-chat": {
+      "n": 40,
+      "citation_recall": 0.3843,
+      "citation_precision": 0.2444,
+      "citation_f1": 0.2804
+    },
+    "multifieldqa_en": {
+      "n": 120,
+      "citation_recall": 0.7352,
+      "citation_precision": 0.447,
+      "citation_f1": 0.5316
+    }
+  },
+  "avg_reported": {
+    "datasets": [
+      "gov_report",
+      "hotpotqa",
+      "longbench-chat"
+    ],
+    "citation_recall": 0.6505,
+    "citation_precision": 0.4543,
+    "citation_f1": 0.5181
+  },
+  "avg_all_datasets": {
+    "datasets": [
+      "gov_report",
+      "hotpotqa",
+      "longbench-chat",
+      "multifieldqa_en"
+    ],
+    "citation_recall": 0.6717,
+    "citation_precision": 0.4525,
+    "citation_f1": 0.5215
+  },
+  "citation_length": {
+    "mean": 35.64,
+    "n": 33109,
+    "unit": "glm4"
+  },
+  "cost_latency": {
+    "n": 480,
+    "latency_p50_s": 6.655,
+    "latency_p95_s": 14.957,
+    "usd_per_query_mean": 0.001445,
+    "usd_total": 0.6938
+  },
+  "judge_cost_usd_total": 4.8772
+}

@@ -52,7 +52,7 @@ example disambiguates fine because each claim carries its own context in the
   long-context attention kernel; it explains the *principle* (thin answer×doc
   slice, selected heads, tiled recompute à la FlashAttention) and points at the
   FlashAttention paper. Confidence without IP leak was the explicit goal.
-- Benchmark F1 figures must stay in sync with `../blog/post.md`: TokenPath 0.785,
+- Benchmark F1 figures must stay in sync with `../blog/post.md`: TokenPath 0.815,
   LLM methods 0.81–0.85, retrieval 0.62.
 
 ## Suggested figures (for the site)
