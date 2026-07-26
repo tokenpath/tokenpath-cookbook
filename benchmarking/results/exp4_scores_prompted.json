@@ -68,7 +68,7 @@
     "judge_model": "google/gemini-2.5-flash",
     "citations_api_model": "claude-sonnet-5",
     "embed_model": "text-embedding-3-large",
-    "tokenpath_mass_threshold": 0.3,
+    "tokenpath_mass_threshold": 0.1,
     "seed": 0,
     "tokenpath_api_url": "https://api.tokenpath.ai",
     "tokenpath_backend_id": "",

@@ -67,12 +67,19 @@ def agg_cfg(threshold_override: float | None = None) -> dict:
 
 
 def _cfg(args) -> config.RunConfig:
-    """Provenance for this run: one model fills every LLM role."""
+    """Provenance for this run: one model fills every LLM role.
+
+    tokenpath_mass_threshold must be the RESOLVED threshold, not RunConfig's
+    default. Left unset it recorded config.TOKENPATH_MASS_THRESHOLD (0.30) into
+    every scores file while the run actually used the val-tuned 0.10 — a
+    provenance block that contradicts the run it describes is worse than none.
+    """
     return config.RunConfig(
         run_date=args.run_date,
         generator_model=args.model,
         prompted_model=args.model,
         judge_model=args.judge_model,
+        tokenpath_mass_threshold=agg_cfg(args.threshold)["threshold"],
         seed=args.seed,
         extra={"experiment": "exp4_within_model", "model_under_test": args.model},
     )
