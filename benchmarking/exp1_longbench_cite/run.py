@@ -71,8 +71,11 @@ def build_method(name: str, cfg: config.RunConfig):
 # --------------------------------------------------------------------------- #
 # Stage 2: attach citations                                                   #
 # --------------------------------------------------------------------------- #
-def cite_stage(name: str, method, examples: list[dict], frozen: dict[str, str]) -> str:
-    out = os.path.join(RESULTS_DIR, f"exp1_cited_{name}.jsonl")
+def cite_stage(name: str, method, examples: list[dict], frozen: dict[str, str],
+               prefix: str = "exp1") -> str:
+    # `prefix` namespaces the cache files so another experiment (Exp 3 reuses these
+    # stages verbatim) writes alongside rather than over Exp 1's results.
+    out = os.path.join(RESULTS_DIR, f"{prefix}_cited_{name}.jsonl")
     cached = {r["idx"]: r for r in read_jsonl_latest(out)}
 
     def signature_for(e: dict):
@@ -126,8 +129,9 @@ def cite_stage(name: str, method, examples: list[dict], frozen: dict[str, str]) 
 # --------------------------------------------------------------------------- #
 # Stage 3: judge                                                              #
 # --------------------------------------------------------------------------- #
-def judge_stage(name: str, cited_path: str, cfg: config.RunConfig) -> str:
-    out = os.path.join(RESULTS_DIR, f"exp1_judged_{name}.jsonl")
+def judge_stage(name: str, cited_path: str, cfg: config.RunConfig,
+                prefix: str = "exp1") -> str:
+    out = os.path.join(RESULTS_DIR, f"{prefix}_judged_{name}.jsonl")
     judged_by_idx = {r["idx"]: r for r in read_jsonl_latest(out)}
     cited_records = read_jsonl_latest(cited_path)
     failures = [r for r in cited_records if is_error_record(r)]
@@ -184,9 +188,16 @@ def judge_stage(name: str, cited_path: str, cfg: config.RunConfig) -> str:
 # --------------------------------------------------------------------------- #
 # Stage 4: aggregate                                                          #
 # --------------------------------------------------------------------------- #
-def aggregate(name: str, judged_path: str, cited_path: str, cfg: config.RunConfig) -> dict:
+def aggregate(name: str, judged_path: str, cited_path: str, cfg: config.RunConfig,
+              prefix: str = "exp1", only_idx: set | None = None) -> dict:
     judged = read_jsonl_latest(judged_path)
     cited = {r["idx"]: r for r in read_jsonl_latest(cited_path)}
+    # Cache files accumulate every example ever run through them, including val
+    # records from a smoke run. Averaging those into a TEST score is leakage — val
+    # is what tuned the threshold — so a run reports only the split it asked for.
+    if only_idx is not None:
+        judged = [r for r in judged if r["idx"] in only_idx]
+        cited = {i: r for i, r in cited.items() if i in only_idx}
     failures = [r for r in judged if is_error_record(r)] + [
         r for r in cited.values() if is_error_record(r)
     ]
@@ -262,7 +273,7 @@ def aggregate(name: str, judged_path: str, cited_path: str, cfg: config.RunConfi
     }
     if preserved:
         summary["answer_preserved_mean"] = round(float(np.mean(preserved)), 4)
-    write_json(os.path.join(RESULTS_DIR, f"exp1_scores_{name}.json"), summary)
+    write_json(os.path.join(RESULTS_DIR, f"{prefix}_scores_{name}.json"), summary)
     return summary
 
 

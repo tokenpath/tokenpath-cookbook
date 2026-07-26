@@ -18,6 +18,7 @@ get citations today**, on benchmarks we didn't write:
 |---|---|---|---|
 | 1 | Citation quality | [LongBench-Cite](https://github.com/THUDM/LongCite) | F1 vs. prompted / regenerated / retrieved citation, plus latency & $/query in the same table |
 | 2 | Attribution-guided citation selection | [WebCode](https://exa.ai/blog/webcode) (Exa) | Citation precision for all returned results vs. one shared attribution-mass selection rule |
+| 4 | Within-model: attention vs asking | [LongBench-Cite](https://github.com/THUDM/LongCite) | ONE model writes the answer, cites it when asked, and has its attention read — de-confounds method from model, which Exp 1 cannot |
 
 ## What we compare against (Experiment 1)
 
@@ -97,7 +98,46 @@ python -m benchmarking.exp2_webcode.load_data --make-sample   # offline fixture
 python -m benchmarking.exp2_webcode.run --data benchmarking/data/webcode/sample.jsonl
 python -m benchmarking.exp2_webcode.make_chart
 
+# Exp 4 — within-model (needs Qwen3.5-9B served locally; see below)
+python -m benchmarking.exp1_longbench_cite.tune_threshold \
+  --model local/qwen3.5-9b --thresholds 0.02 0.05 0.10 0.15 0.20 0.30 \
+  --frozen-path benchmarking/results/exp4_frozen_answers.jsonl \
+  --out benchmarking/results/exp4_threshold.json --limit-per-dataset 600
+python -m benchmarking.exp4_within_model.run --arm both --split test
+python -m benchmarking.exp4_within_model.make_table
+
 ```
+
+## Exp 4: serving the model under test
+
+Exp 4 needs the SAME open weights that produce the attention map to also write and
+cite the answer, which no hosted provider exposes — so serve them yourself and
+address the server as `local/<served-model-name>`:
+
+```bash
+# .venv-vllm/bin must be on PATH: Qwen3.5's linear-attention kernels JIT-compile
+# and the engine dies with FileNotFoundError: 'ninja' otherwise. First start also
+# compiles flashinfer GDN kernels with nvcc — several minutes, silent, then cached.
+PATH="$PWD/.venv-vllm/bin:$PATH" python -m vllm.entrypoints.openai.api_server \
+  --model Qwen/Qwen3.5-9B --served-model-name qwen3.5-9b \
+  --port 8001 --max-model-len 131072
+
+export TP_LLM_TIMEOUT_S=1800   # thinking + a long citation JSON exceeds the 180s default
+```
+
+Two settings matter for a fair prompted condition, both learned the hard way:
+
+- **Completion budget.** JSON carrying a verbatim quote per answer sentence is
+  token-hungry. At 2048 tokens, 85% of "format failures" were truncation on
+  `gov_report`; raising it to 16384 moved format adherence from 72% to 92%. A
+  truncated row measures your budget, not the model's citation quality.
+- **The thought channel.** Qwen3.5 reasons by default and returns it inside
+  `content`, closed by `</think>`. Unstripped, the JSON parser matches braces in
+  the reasoning and scores a good response as zero citations.
+
+`run.py` fails the run if a condition scores exactly 0.000 with well-formed
+output, if judged citation counts diverge from produced ones, or if truncation
+exceeds 10% — the three shapes that produced wrong numbers during development.
 
 ## Data you supply
 

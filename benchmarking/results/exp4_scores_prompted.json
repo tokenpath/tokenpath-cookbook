@@ -1,0 +1,83 @@
+{
+  "method": "prompted",
+  "n_examples": 480,
+  "per_dataset": {
+    "gov_report": {
+      "n": 160,
+      "citation_recall": 0.5319,
+      "citation_precision": 0.7867,
+      "citation_f1": 0.6147
+    },
+    "hotpotqa": {
+      "n": 160,
+      "citation_recall": 0.7219,
+      "citation_precision": 0.809,
+      "citation_f1": 0.6821
+    },
+    "longbench-chat": {
+      "n": 40,
+      "citation_recall": 0.2587,
+      "citation_precision": 0.3157,
+      "citation_f1": 0.2058
+    },
+    "multifieldqa_en": {
+      "n": 120,
+      "citation_recall": 0.7077,
+      "citation_precision": 0.7871,
+      "citation_f1": 0.7137
+    }
+  },
+  "avg_reported": {
+    "datasets": [
+      "gov_report",
+      "hotpotqa",
+      "longbench-chat"
+    ],
+    "citation_recall": 0.5042,
+    "citation_precision": 0.6371,
+    "citation_f1": 0.5009
+  },
+  "avg_all_datasets": {
+    "datasets": [
+      "gov_report",
+      "hotpotqa",
+      "longbench-chat",
+      "multifieldqa_en"
+    ],
+    "citation_recall": 0.5551,
+    "citation_precision": 0.6746,
+    "citation_f1": 0.5541
+  },
+  "citation_length": {
+    "mean": 43.25,
+    "n": 5062,
+    "unit": "glm4"
+  },
+  "cost_latency": {
+    "n": 480,
+    "latency_p50_s": 3.551,
+    "latency_p95_s": 30.893,
+    "usd_per_query_mean": 0.011263,
+    "usd_total": 5.4061
+  },
+  "judge_cost_usd_total": 1.3495,
+  "provenance": {
+    "run_date": "2026-07-25",
+    "generator_model": "local/qwen3.5-9b",
+    "prompted_model": "local/qwen3.5-9b",
+    "judge_model": "google/gemini-2.5-flash",
+    "citations_api_model": "claude-sonnet-5",
+    "embed_model": "text-embedding-3-large",
+    "tokenpath_mass_threshold": 0.3,
+    "seed": 0,
+    "tokenpath_api_url": "https://api.tokenpath.ai",
+    "tokenpath_backend_id": "",
+    "openrouter_api_url": "https://openrouter.ai/api/v1"
+  },
+  "format_adherence": {
+    "n": 480,
+    "format_ok_rate": 0.9167,
+    "truncated_rate": 0.0167,
+    "nonverbatim_quote_rate": 0.2036
+  }
+}

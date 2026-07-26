@@ -81,7 +81,12 @@ class TokenPathMethod(Method):
             "input_sha256": hashlib.sha256(inputs).hexdigest(),
         }
 
-    def cite(self, example: dict, answer: str) -> CitedAnswer:
+    def cite(
+        self,
+        example: dict,
+        answer: str,
+        statement_spans_override: list[list[int]] | None = None,
+    ) -> CitedAnswer:
         document, query = example["context"], example["query"]
         cache_signature = self.cache_signature_for(example, answer)
         timed = self.client.heatmap(document, query, answer)
@@ -91,7 +96,16 @@ class TokenPathMethod(Method):
         # document once; the aggregator turns attention mass into cited sentences.
         doc_sentence_spans = statement_spans(document)
 
-        statements = empty_statements(answer)
+        # Exp 3 Arm 2 compares against citations the model emitted inline, so the
+        # statement boundaries are the ones the MODEL chose, not our segmenter's.
+        # Passing them in keeps both conditions scored on identical statements.
+        if statement_spans_override is not None:
+            statements = [
+                {"statement": answer[s:e], "span": [s, e], "citation": []}
+                for s, e in statement_spans_override
+            ]
+        else:
+            statements = empty_statements(answer)
         for st in statements:
             s, e = st["span"]
             spans = agg.aggregate(hm, s, e, doc_sentence_spans, self.agg_cfg,

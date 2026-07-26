@@ -1,0 +1,77 @@
+{
+  "method": "tokenpath",
+  "n_examples": 480,
+  "per_dataset": {
+    "gov_report": {
+      "n": 160,
+      "citation_recall": 0.8342,
+      "citation_precision": 0.9578,
+      "citation_f1": 0.8889
+    },
+    "hotpotqa": {
+      "n": 160,
+      "citation_recall": 0.717,
+      "citation_precision": 0.7888,
+      "citation_f1": 0.6873
+    },
+    "longbench-chat": {
+      "n": 40,
+      "citation_recall": 0.5985,
+      "citation_precision": 0.783,
+      "citation_f1": 0.6392
+    },
+    "multifieldqa_en": {
+      "n": 120,
+      "citation_recall": 0.9241,
+      "citation_precision": 0.9283,
+      "citation_f1": 0.9149
+    }
+  },
+  "avg_reported": {
+    "datasets": [
+      "gov_report",
+      "hotpotqa",
+      "longbench-chat"
+    ],
+    "citation_recall": 0.7166,
+    "citation_precision": 0.8432,
+    "citation_f1": 0.7385
+  },
+  "avg_all_datasets": {
+    "datasets": [
+      "gov_report",
+      "hotpotqa",
+      "longbench-chat",
+      "multifieldqa_en"
+    ],
+    "citation_recall": 0.7685,
+    "citation_precision": 0.8645,
+    "citation_f1": 0.7826
+  },
+  "citation_length": {
+    "mean": 52.99,
+    "n": 6787,
+    "unit": "glm4"
+  },
+  "cost_latency": {
+    "n": 480,
+    "latency_p50_s": 1.2,
+    "latency_p95_s": 2.68,
+    "usd_per_query_mean": 0.012685,
+    "usd_total": 6.0889
+  },
+  "judge_cost_usd_total": 1.3435,
+  "provenance": {
+    "run_date": "2026-07-25",
+    "generator_model": "local/qwen3.5-9b",
+    "prompted_model": "local/qwen3.5-9b",
+    "judge_model": "google/gemini-2.5-flash",
+    "citations_api_model": "claude-sonnet-5",
+    "embed_model": "text-embedding-3-large",
+    "tokenpath_mass_threshold": 0.3,
+    "seed": 0,
+    "tokenpath_api_url": "https://api.tokenpath.ai",
+    "tokenpath_backend_id": "",
+    "openrouter_api_url": "https://openrouter.ai/api/v1"
+  }
+}

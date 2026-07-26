@@ -28,5 +28,14 @@ results/exp1nat_heatmap_manifest.jsonl
 results/exp1nat_heatmaps/
 results/sweep/
 
+# Within-model experiment (Exp 4): same convention — the frozen answers and the
+# per-example cited/judged records are large and regenerable from the harness.
+# The committed record is the scores JSONs, exp4_threshold.json, and exp4_table.md.
+results/exp4_frozen_answers.jsonl
+results/exp4_cited_*.jsonl
+results/exp4_judged_*.jsonl
+results/exp4inline_cited_*.jsonl
+results/exp4inline_judged_*.jsonl
+
 # Keep: results/*.md, results/*.png, results/exp*_scores*.json, exp1_threshold.json,
-#       blog/ (post + chart data)
+#       exp4_threshold.json, blog/ (post + chart data)
