@@ -6,6 +6,7 @@ OpenAI-compatible endpoint:
 
     openai/<model>   -> https://api.openai.com/v1            (OPENAI_API_KEY)
     google/<model>   -> Gemini OpenAI-compat endpoint        (GOOGLE_API_KEY)
+    local/<model>    -> a self-hosted vLLM server            (no key needed)
     <anything else>  -> OpenRouter                           (OPENROUTER_API_KEY)
 
 We call each provider directly (not through OpenRouter) so a personal OpenRouter
@@ -22,6 +23,10 @@ Provider quirks handled here so call sites stay uniform:
   - Gemini 2.5 is a thinking model; with a small token budget it spends it all on
     hidden reasoning and returns empty content. We send `reasoning_effort:"none"`
     so the short-output judge gets its rating within budget.
+  - A local vLLM server needs no key and reports no cost, so we price it by GPU
+    occupancy (config.LOCAL_USD_PER_GPU_HOUR x wall-clock seconds). Exp 3 runs the
+    same open weights as generator, citer, and attention source; pricing both LLM
+    conditions off the same clock is what makes their cost columns comparable.
 
 Retries: exponential backoff on 429 / 5xx / transient network errors, capped.
 Latency is measured at the call site.
@@ -50,12 +55,30 @@ class ChatResult:
     seconds: float
     model: str
     raw: dict = field(repr=False, default_factory=dict)
+    # "length" means the model was cut off mid-answer. Callers report that
+    # separately from a badly-formed answer: running out of budget and emitting
+    # malformed output are different failures and must not be scored as one.
+    finish_reason: str = ""
+
+
+def strip_thinking(text: str) -> str:
+    """Drop a thought-channel prefix, keeping only the post-</think> answer.
+
+    A locally served thinking model with no --reasoning-parser returns its
+    reasoning inside `content`, closed by </think>, with the real answer after it.
+    Parsing the whole blob finds braces inside the reasoning and fails, which
+    scores as "the model cited nothing" when in fact the citations were there.
+    """
+    if "</think>" in text:
+        return text.split("</think>")[-1].lstrip()
+    return text
 
 
 # Provider backends. base_url is OpenAI-compatible /chat/completions for all three.
 _BACKENDS = {
     "openai": ("https://api.openai.com/v1", "OPENAI_API_KEY"),
     "google": ("https://generativelanguage.googleapis.com/v1beta/openai", "GOOGLE_API_KEY"),
+    "local": (config.LOCAL_LLM_API_URL, "LOCAL_LLM_API_KEY"),
     "openrouter": (config.OPENROUTER_API_URL, "OPENROUTER_API_KEY"),
 }
 
@@ -63,7 +86,7 @@ _BACKENDS = {
 def _route(model: str) -> tuple[str, str]:
     """(provider, model_name) — direct providers strip the prefix; else OpenRouter."""
     prefix = model.split("/", 1)[0]
-    if prefix in ("openai", "google"):
+    if prefix in ("openai", "google", "local"):
         return prefix, model.split("/", 1)[1]
     return "openrouter", model  # OpenRouter keeps the fully-qualified id
 
@@ -74,11 +97,15 @@ class LLMClient:
     def __init__(self, keys: dict[str, str] | None = None, timeout: int = 180):
         import os
 
-        # One API key per provider, read from the environment unless supplied.
+        # One API key per provider, read from the environment unless supplied. The
+        # local vLLM server authenticates nothing, so it falls back to a
+        # placeholder rather than tripping the missing-key guard below.
         self.keys = keys or {
             provider: os.environ.get(envname, "")
             for provider, (_, envname) in _BACKENDS.items()
         }
+        self.keys.setdefault("local", "")
+        self.keys["local"] = self.keys["local"] or config.LOCAL_LLM_API_KEY
         self.timeout = timeout
         self._session = requests.Session()
 
@@ -90,6 +117,7 @@ class LLMClient:
         max_tokens: int = 1024,
         stop: str | list[str] | None = None,
         max_retries: int = 5,
+        enable_thinking: bool | None = None,
     ) -> ChatResult:
         provider, model_name = _route(model)
         base_url, _ = _BACKENDS[provider]
@@ -110,6 +138,15 @@ class LLMClient:
             payload["max_tokens"] = max(max_tokens, 16)
             payload["temperature"] = temperature
             payload["reasoning_effort"] = "none"
+        elif provider == "local":
+            # Plain OpenAI-compatible vLLM: no cost extension. The thought channel
+            # is the one knob that matters — see config.LOCAL_ENABLE_THINKING.
+            payload["max_tokens"] = max_tokens
+            payload["temperature"] = temperature
+            think = (
+                config.LOCAL_ENABLE_THINKING if enable_thinking is None else enable_thinking
+            )
+            payload["chat_template_kwargs"] = {"enable_thinking": bool(think)}
         else:  # openrouter
             payload["max_tokens"] = max_tokens
             payload["temperature"] = temperature
@@ -134,18 +171,26 @@ class LLMClient:
                 if not resp.ok:
                     raise OpenRouterError(f"{resp.status_code}: {resp.text[:300]}")
                 data = resp.json()
-                text = data["choices"][0]["message"].get("content") or ""
+                choice = data["choices"][0]
+                text = choice["message"].get("content") or ""
+                # Some servers split the thought channel out for us; when they
+                # don't, it arrives inline and has to be trimmed off.
+                text = strip_thinking(text)
                 usage = data.get("usage", {}) or {}
                 pt = int(usage.get("prompt_tokens", 0) or 0)
                 ct = int(usage.get("completion_tokens", 0) or 0)
                 cost = usage.get("cost")
-                if cost is None:  # direct providers don't report cost -> price it
+                if provider == "local":
+                    # Self-hosted: price the GPU time this call occupied, not tokens.
+                    cost = seconds / 3600.0 * config.LOCAL_USD_PER_GPU_HOUR
+                elif cost is None:  # direct providers don't report cost -> price it
                     inp, out = config.PRICE.get(model, (0.0, 0.0))
                     cost = pt / 1_000_000 * inp + ct / 1_000_000 * out
                 return ChatResult(
                     text=text, prompt_tokens=pt, completion_tokens=ct,
                     cost_usd=float(cost), seconds=seconds,
                     model=data.get("model", model), raw=data,
+                    finish_reason=choice.get("finish_reason") or "",
                 )
             except (OpenRouterError, requests.RequestException) as exc:
                 last_err = exc

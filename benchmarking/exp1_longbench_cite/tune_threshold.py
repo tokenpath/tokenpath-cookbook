@@ -87,14 +87,21 @@ def main():
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--all-languages", action="store_true")
     ap.add_argument("--limit-per-dataset", type=int, default=10)
+    # Exp 3 tunes on ITS OWN model's answers: a threshold fitted to one model's
+    # answer distribution is not a valid operating point for another's. These three
+    # flags let it reuse this tuner instead of forking it; defaults are Exp 1's.
+    ap.add_argument("--model", default=config.GENERATOR_MODEL,
+                    help="generator whose answers the threshold is tuned on")
+    ap.add_argument("--frozen-path", default=freeze_answers.FROZEN_PATH)
+    ap.add_argument("--out", default=os.path.join(RESULTS_DIR, "exp1_threshold.json"))
     args = ap.parse_args()
 
     examples = load_data.load_split(
         "val", seed=args.seed, english_only=not args.all_languages,
         limit_per_dataset=args.limit_per_dataset,
     )
-    freeze_answers.freeze(examples, model=config.GENERATOR_MODEL)
-    frozen = {r["idx"]: r["prediction"] for r in read_jsonl(freeze_answers.FROZEN_PATH)}
+    freeze_answers.freeze(examples, model=args.model, out_path=args.frozen_path)
+    frozen = {r["idx"]: r["prediction"] for r in read_jsonl(args.frozen_path)}
 
     # One heatmap call per example, reused across all candidate thresholds.
     tp = env.tokenpath_client()
@@ -129,8 +136,10 @@ def main():
         "n_val_examples": len(heatmaps),
         "best_agg_cfg": {**config.TOKENPATH_AGG, "threshold": float(best)},
     }
-    write_json(os.path.join(RESULTS_DIR, "exp1_threshold.json"), out)
-    print(f"best threshold = {best} (val F1 {results[best]}) -> exp1_threshold.json")
+    out["generator_model"] = args.model
+    out["thresholds_swept"] = list(args.thresholds)
+    write_json(args.out, out)
+    print(f"best threshold = {best} (val F1 {results[best]}) -> {os.path.basename(args.out)}")
 
 
 if __name__ == "__main__":

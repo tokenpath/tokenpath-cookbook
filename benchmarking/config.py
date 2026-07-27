@@ -36,6 +36,21 @@ OPENROUTER_API_URL = os.environ.get("OPENROUTER_API_URL", "https://openrouter.ai
 # OpenRouter's normalized chat API, so that one baseline talks to Anthropic
 # directly. It is gated on ANTHROPIC_API_KEY and skipped if unset.
 ANTHROPIC_API_URL = os.environ.get("ANTHROPIC_API_URL", "https://api.anthropic.com")
+# A locally served, OpenAI-compatible chat endpoint (vLLM). Exp 4 needs the SAME
+# open weights that produce the attention map to also answer and cite, which no
+# hosted provider gives us, so we serve them ourselves and address the server as
+# `local/<served-model-name>`. No API key: vLLM ignores it (the "EMPTY" default is
+# vLLM's own convention).
+LOCAL_LLM_API_URL = os.environ.get("LOCAL_LLM_API_URL", "http://127.0.0.1:8001/v1")
+LOCAL_LLM_API_KEY = os.environ.get("LOCAL_LLM_API_KEY", "EMPTY")
+# Qwen3.5 has a thought channel and it is ON by default: a bare request answers
+# with a "Thinking Process:" preamble. Unhandled, that would put reasoning text
+# inside the frozen answer and, in Arm 2, burn the token budget before the model
+# ever emits a <statement> tag. So local calls default to thinking OFF and pass it
+# explicitly. Per-call override exists so the prompted condition can be given
+# thinking as its steelman (see exp4 run.py) — the attention condition is
+# unaffected either way, since it reads attention over an existing answer.
+LOCAL_ENABLE_THINKING = os.environ.get("TP_LOCAL_ENABLE_THINKING", "0") not in ("0", "", "false")
 
 # --------------------------------------------------------------------------- #
 # Models — pinned. Cheap by default (per instruction). Every model id is an    #
@@ -52,6 +67,17 @@ GENERATOR_MODEL = os.environ.get("TP_GENERATOR_MODEL", "openai/gpt-5.5")
 
 # The prompted-citation baseline ("add citations" pass over the frozen answer).
 PROMPTED_MODEL = os.environ.get("TP_PROMPTED_MODEL", "openai/gpt-5.5")
+
+# Exp 4 (within-model): the ONE model that fills every role — it writes the answer,
+# cites its own answer when asked, and is the model whose attention TokenPath reads.
+# Defaults to the model our production attribution API serves, so the attention side
+# needs no new head search and the result speaks to what we actually ship. Served
+# locally (see LOCAL_LLM_API_URL) because no hosted provider exposes the weights we
+# read attention from.
+EXP4_MODEL = os.environ.get("TP_EXP4_MODEL", "local/qwen3.5-9b")
+# Coarse threshold grid for Exp 4's val sweep. Deliberately short: a within-model
+# result that survives a coarse sweep is stronger than one tuned to a fine grid.
+EXP4_THRESHOLD_GRID = (0.10, 0.20, 0.30, 0.40)
 
 # The judge. One consistent, cheap-but-modern judge across ALL rows (ours + any
 # re-judged anchors) so the F1 column is internally apples-to-apples. Published
@@ -91,6 +117,13 @@ PRICE = {
     "openai/gpt-4o-mini": (0.15, 0.60),
     "google/gemini-2.5-flash": (0.30, 2.50),
 }
+# Locally served models have no list price, so the $/query column prices them by
+# occupancy: wall-clock seconds on the GPU that served the call. For a serialized
+# single-GPU run that is exactly what the work cost. Default is a representative
+# on-demand H200 hourly rate — override to match what you actually pay. This makes
+# the prompted and attention rows in Exp 4 commensurable: same GPU, same rate, so
+# the cost ratio between them is just the work ratio (decode vs one prefill).
+LOCAL_USD_PER_GPU_HOUR = float(os.environ.get("TP_LOCAL_USD_PER_GPU_HOUR", "3.50"))
 # Anthropic Citations baseline is priced separately (native, not via LLMClient).
 ANTHROPIC_PRICE = {
     "claude-sonnet-5": (3.0, 15.0),

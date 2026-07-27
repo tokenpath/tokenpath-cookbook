@@ -1,0 +1,31 @@
+{
+  "best_threshold": 0.1,
+  "val_f1_by_threshold": {
+    "0.02": 0.7325,
+    "0.05": 0.7579,
+    "0.1": 0.7666,
+    "0.15": 0.7131,
+    "0.2": 0.6696,
+    "0.3": 0.5522
+  },
+  "split": "val",
+  "seed": 0,
+  "judge_model": "google/gemini-2.5-flash",
+  "judge_cost_usd": 2.0898,
+  "n_val_examples": 120,
+  "best_agg_cfg": {
+    "threshold": 0.1,
+    "row_norm": true,
+    "merge_adjacent": true,
+    "max_spans": 4
+  },
+  "generator_model": "local/qwen3.5-9b",
+  "thresholds_swept": [
+    0.02,
+    0.05,
+    0.1,
+    0.15,
+    0.2,
+    0.3
+  ]
+}
